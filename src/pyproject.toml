@@ -5,7 +5,7 @@ description = ""
 authors = ["Evening"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "frdc_ml"}]
+packages = [{include = "frdc"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"

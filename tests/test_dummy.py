@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from evaluate.evaluate import dummy_evaluate
-from load import load_image
-from preprocess.preprocess import dummy_preprocess
-from train.train import dummy_train
+from frdc.evaluate.evaluate import dummy_evaluate
+from frdc.load import load_image
+from frdc.preprocess import dummy_preprocess
+from frdc.train.train import dummy_train
 
 
 def test_pipeline():
