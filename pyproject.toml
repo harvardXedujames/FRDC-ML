@@ -2,10 +2,10 @@
 name = "frdc-ml"
 version = "0.1.0"
 description = ""
-authors = ["Evening"]
+authors = ["Eve-ning"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "frdc"}]
+packages = [{include = "src/frdc"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
