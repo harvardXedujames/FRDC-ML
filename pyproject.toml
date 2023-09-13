@@ -5,7 +5,7 @@ description = ""
 authors = ["Eve-ning"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "src/frdc"}]
+packages = [{ include = "src/frdc" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -19,3 +19,9 @@ matplotlib = "^3.7.3"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "src"
+]
