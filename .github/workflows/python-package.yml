@@ -29,7 +29,7 @@ jobs:
       - name: Initialize GCS credentials
         run: |
           mkdir -p ./.secrets
-          echo "${{ secrets.FRDC_DOWNLOAD_KEY }}" > ./.secrets/frmodel-key.json
+          echo '${{ secrets.FRDC_DOWNLOAD_KEY }}' > ./.secrets/frmodel-key.json
 
       - name: Install dependencies
         run: |
