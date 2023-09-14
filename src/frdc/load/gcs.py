@@ -34,7 +34,7 @@ class GCS:
         client = storage.Client(project=self.project_id, credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
-    def list_datasets(self) -> pd.DataFrame:
+    def list_gcs_datasets(self) -> pd.DataFrame:
         """ Lists all datasets from Google Cloud Storage.
 
         Returns:
