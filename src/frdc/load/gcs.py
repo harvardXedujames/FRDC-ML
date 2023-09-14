@@ -62,6 +62,7 @@ class GCS:
             # Drop any dupes (likely none)
             .drop_duplicates()
             .reset_index(drop=True)
+            .set_index(['survey_site', 'survey_date'])
         )
 
         return df
