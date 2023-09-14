@@ -48,7 +48,7 @@ class GCS:
         df = (
             # The list of all blobs in the bucket that contains the anchor file
             # E.g. "chestnut_nature_park/20201218/183deg/result_Red.tif"
-            pd.Series([blob.name for blob in gcs.bucket.list_blobs(match_glob=f"**/{anchor}")])
+            pd.Series([blob.name for blob in self.bucket.list_blobs(match_glob=f"**/{anchor}")])
             # Remove the anchor file name
             # E.g. "chestnut_nature_park/20201218/183deg"
             .str.replace(f"/{anchor}", "")
