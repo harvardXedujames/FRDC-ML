@@ -112,3 +112,18 @@ class GCS:
 
         downloaded_files = list((self.rsc_folder / file_dir).glob("*.tif"))
         return downloaded_files
+
+    def download_datasets(self, survey_site_filter: str = None, dryrun: bool = True):
+        """ Downloads all datasets from Google Cloud Storage.
+        
+        Args:
+            survey_site_filter: If not None, only downloads datasets with the specified survey_site_filter.
+            dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
+        """
+
+        datasets = self.list_gcs_datasets() \
+            if survey_site_filter is None \
+            else self.list_gcs_datasets().loc[survey_site_filter]
+
+        for _, args in datasets.reset_index().iterrows():
+            self.download_dataset(survey_site=survey_site_filter, **args, dryrun=dryrun)
