@@ -131,3 +131,25 @@ def extract_segments(ar: np.ndarray, ar_segments_mask: np.ndarray) -> list[np.nd
         ar_segment = np.where(ar_segment_mask[..., None], ar_segment, np.nan)
         ar_segments.append(ar_segment)
     return ar_segments
+
+
+def extract_segments_crop(ar: np.ndarray, ar_segments_mask: np.ndarray) -> list[np.ndarray]:
+    """ Extracts segments as a list from a label image.
+
+    Args:
+        ar: The source image to extract segments from.
+        ar_segments_mask: Segments Image, where each integer value is a segment mask.
+        
+    Returns:
+        A list of cropped segments, each segment is of shape (H, W, C).
+
+    """
+    ar_segments = []
+    for segment_ix in range(1, np.max(ar_segments_mask) + 1):
+        segment = ar_segments_mask == segment_ix
+        coords = np.argwhere(segment)
+        x0, y0 = coords.min(axis=0)
+        x1, y1 = coords.max(axis=0) + 1
+        segment_size = (x1 - x0) * (y1 - y0)
+        ar_segments.append(ar[x0:x1, y0:y1])
+    return ar_segments
