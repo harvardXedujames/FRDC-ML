@@ -26,6 +26,4 @@ def test_list_datasets(ds):
 def test_load_dataset(ds):
     # Loading the debug dataset indirectly tests the load_dataset method.
     dataset = ds._load_debug_dataset()
-    assert len(dataset) == len(Band.FILE_NAMES)
-    for value in dataset.values():
-        assert isinstance(value, np.ndarray)
+    assert dataset.shape[2] == len(Band.FILE_NAMES)
