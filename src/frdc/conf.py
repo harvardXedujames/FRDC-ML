@@ -23,3 +23,9 @@ class Band:
         'result_RedEdge.tif',
         'result_NIR.tif'
     )
+
+    BLUE_MAX = 2 ** 14
+    GREEN_MAX = 2 ** 14
+    RED_MAX = 2 ** 14
+    RED_EDGE_MAX = 2 ** 14
+    NIR_MAX = 2 ** 14
