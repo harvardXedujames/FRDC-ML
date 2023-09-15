@@ -168,3 +168,17 @@ class GCS:
             Dataset directory.
         """
         return Path(f"{site}/{date}/{version + '/' if version else ''}")
+
+    @staticmethod
+    def load_image(path: Path | str) -> np.ndarray:
+        """ Loads an Image from a path.
+
+        Args:
+            path: Path to image. pathlib.Path is preferred, but str is also accepted.
+
+        Returns:
+            Image as numpy array.
+        """
+
+        im = Image.open(Path(path).as_posix())
+        return np.array(im)
