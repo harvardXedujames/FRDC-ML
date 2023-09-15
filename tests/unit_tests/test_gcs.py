@@ -1,17 +1,23 @@
-from frdc.load import GCS
+import pytest
+
+from frdc.conf import DATASET_FILE_NAMES
+from frdc.load import FRDCDataset
 
 
-def test_gcs_download_datasets():
-    gcs = GCS()
-    gcs.download_datasets(dryrun=True)
+@pytest.fixture(scope='module')
+def ds():
+    return FRDCDataset()
 
 
-def test_gcs_list_datasets():
-    gcs = GCS()
-    df = gcs.list_gcs_datasets()
+def test_download_datasets(ds):
+    ds.download_datasets(dryrun=True)
+
+
+def test_list_datasets(ds):
+    df = ds.list_gcs_datasets()
     assert len(df) > 0
 
 
-def test_gcs_download_dataset():
-    gcs = GCS()
-    gcs.download_dataset(survey_site='chestnut_nature_park', survey_date='20201218', survey_version=None, dryrun=True)
+def test_download_dataset(ds):
+    dataset = ds._load_debug_dataset()
+    assert len(dataset) == len(DATASET_FILE_NAMES)
