@@ -8,20 +8,18 @@ import pandas as pd
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
-from frdc.conf import RSC_DIR, SECRETS_DIR
+from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, DATASET_FILE_NAMES, GCS_PROJECT_ID, GCS_BUCKET_NAME
+from frdc.utils.utils import get_dataset_dir
 
 
 @dataclass
 class GCS:
     credentials: Credentials = None
-    rsc_folder: Path = RSC_DIR
-    project_id: str = 'frmodel'
-    bucket_name: str = 'frdc-scan'
+    local_dataset_root_dir: Path = LOCAL_DATASET_ROOT_DIR
+    project_id: str = GCS_PROJECT_ID
+    bucket_name: str = GCS_BUCKET_NAME
     bucket: storage.Bucket = field(init=False)
-    dataset_file_names: tuple[str] = (
-        'result_Blue.tif', 'result_Green.tif', 'result_NIR.tif', 'result_Red.tif', 'result_RedEdge.tif',
-        'bounds.csv'  # May remove this in the future
-    )
+    dataset_file_names: tuple[str] = DATASET_FILE_NAMES
 
     def __post_init__(self):
         # We pull the credentials here instead of the constructor for try-except block to catch the FileNotFoundError
@@ -67,66 +65,59 @@ class GCS:
 
         return df
 
-    def download_dataset(
-            self, *,
-            survey_site: str, survey_date: str, survey_version: str | None,
-            dryrun: bool = True
-    ):
+    def download_dataset(self, *, site: str, date: str, version: str | None, dryrun: bool = True):
         """ Downloads a dataset from Google Cloud Storage.
 
         Notes:
-            Retrieve all valid survey_site, survey_date, survey_version combinations from `list_datasets()`.
+            Retrieve all valid site, date, version combinations from `list_gcs_datasets()`.
 
         Args:
-            survey_site: Survey site name.
-            survey_date: Survey date in YYYYMMDD format.
-            survey_version: Survey version, can be None.
+            site: Survey site name.
+            date: Survey date in YYYYMMDD format.
+            version: Survey version, can be None.
             dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
-
-        Returns:
-            A list of paths to the downloaded files, excluding files failed to download.
         """
 
         # The directory to the files in the bucket, also locally
-        file_dir = f"{survey_site}/{survey_date}/{survey_version + '/' if survey_version else ''}"
+        dataset_dir = get_dataset_dir(site, date, version)
 
-        for file_name in self.dataset_file_names:
+        for dataset_file_name in self.dataset_file_names:
             # Define full paths to the file in the bucket, also locally
-            file_pth = file_dir + file_name
-            lcl_file_pth = self.rsc_folder / file_pth
-            gcs_file_pth = self.bucket.blob(file_pth)
+            dataset_file_path = dataset_dir + dataset_file_name
+            local_file_path = self.local_dataset_root_dir / dataset_file_path
+            gcs_file_path = self.bucket.blob(dataset_file_path)
 
-            if lcl_file_pth.exists():
-                print(f"{lcl_file_pth} already exists, skipping...")
+            if local_file_path.exists():
+                print(f"{local_file_path} already exists, skipping...")
                 continue
 
-            if gcs_file_pth.exists():
-                print(f"Downloading {gcs_file_pth.name} to {lcl_file_pth}...")
+            if gcs_file_path.exists():
+                print(f"Downloading {gcs_file_path.name} to {local_file_path}...")
                 if not dryrun:
                     # Create dir locally
-                    lcl_file_pth.parent.mkdir(parents=True, exist_ok=True)
+                    local_file_path.parent.mkdir(parents=True, exist_ok=True)
                     # Then download from gcs
-                    gcs_file_pth.download_to_filename(lcl_file_pth.as_posix())
+                    gcs_file_path.download_to_filename(local_file_path.as_posix())
             else:
-                warnings.warn(f"{gcs_file_pth.name=} not found")
+                warnings.warn(f"{gcs_file_path.name=} not found")
 
-        downloaded_files = list((self.rsc_folder / file_dir).glob("*.tif"))
-        return downloaded_files
-
-    def download_datasets(self, survey_site_filter: str | list[str] = None, dryrun: bool = True):
+    def download_datasets(self, site_filter: str | list[str] = None, dryrun: bool = True):
         """ Downloads all datasets from Google Cloud Storage.
         
         Args:
-            survey_site_filter: If not None, only downloads datasets with the specified survey_site_filter.
+            site_filter: If not None, only downloads datasets with the specified site_filter.
             dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
         """
 
         # Force the filter as a list, so that when .loc[] is called, it returns the survey_site_filter as an index.
-        survey_site_filter = [survey_site_filter] if isinstance(survey_site_filter, str) else survey_site_filter
+        site_filter = [site_filter] if isinstance(site_filter, str) else site_filter
 
         datasets = self.list_gcs_datasets() \
-            if survey_site_filter is None \
-            else self.list_gcs_datasets().loc[survey_site_filter]
+            if site_filter is None \
+            else self.list_gcs_datasets().loc[site_filter]
 
         for _, args in datasets.reset_index().iterrows():
             self.download_dataset(**args, dryrun=dryrun)
+
+    def load_dataset(self, *, site: str, date: str, version: str | None, download_if_missing: bool = True):
+        ...
