@@ -130,7 +130,7 @@ class FRDCDataset:
         for _, args in datasets.reset_index().iterrows():
             self.download_dataset(**args, dryrun=dryrun)
 
-    def load_dataset(self, *, site: str, date: str, version: str | None) -> dict[str, np.ndarray]:
+    def load_dataset(self, *, site: str, date: str, version: str | None) -> np.ndarray:
         """ Loads a dataset from Google Cloud Storage.
 
         Notes:
@@ -143,12 +143,13 @@ class FRDCDataset:
             version: Survey version, can be None.
 
         Returns:
-            A dictionary of the dataset, with keys as the filenames and values as the images.
+            A numpy array of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         """
         local_dataset_dir = self.download_dataset(site=site, date=date, version=version, dryrun=False)
-        return {filename: self.load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
+        bands_dict = {filename: self.load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
+        return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
-    def _load_debug_dataset(self) -> dict[str, np.ndarray]:
+    def _load_debug_dataset(self) -> np.ndarray:
         """ Loads a debug dataset from Google Cloud Storage.
 
         Returns:
