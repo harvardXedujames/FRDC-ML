@@ -1,12 +1,13 @@
-from frdc.conf import Band
+import numpy as np
+
 from frdc.evaluate.evaluate import dummy_evaluate
 from frdc.load import FRDCDataset
-from frdc.preprocess import dummy_preprocess
+from frdc.preprocess import segment_crowns
 from frdc.train.train import dummy_train
 
 
 def test_pipeline():
-    ar_im = FRDCDataset()._load_debug_dataset()
-    ar_preproc = dummy_preprocess(ar_im[Band.FILE_NAMES[0]])
-    model = dummy_train(ar_preproc)
-    evaluate = dummy_evaluate(model, ar_preproc)
+    bands_dict = FRDCDataset()._load_debug_dataset()
+    ar_background, ar_crowns = segment_crowns(bands_dict)
+    model = dummy_train(np.stack(ar_crowns))
+    evaluate = dummy_evaluate(model, np.stack(ar_crowns))
