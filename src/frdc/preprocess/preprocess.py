@@ -8,7 +8,7 @@ from skimage.segmentation import watershed
 from frdc.conf import Band
 
 
-def segment_crowns(
+def compute_segments_mask(
         ar: np.ndarray,
         nir_threshold_value=0.5,
         min_crown_size=100,
@@ -16,8 +16,8 @@ def segment_crowns(
         connectivity=1,
         peaks_footprint=20,
         watershed_compactness=0.1
-) -> tuple[np.ndarray, list[np.ndarray]]:
-    """ Segments crowns from a dictionary of bands.
+) -> np.ndarray:
+    """ Automatically segments crowns from an NDArray with a series of image processing operations.
 
     Args:
         ar: NDArray of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
@@ -37,9 +37,8 @@ def segment_crowns(
     ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size, connectivity=connectivity)
     ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole, connectivity=connectivity)
-    ar_watershed = binary_watershed(ar_mask, peaks_footprint, watershed_compactness)
-    ar_background, *ar_crowns = extract_segments(ar, ar_watershed)
-    return ar_background, ar_crowns
+    ar_label = binary_watershed(ar_mask, peaks_footprint, watershed_compactness)
+    return ar_label
 
 
 def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
@@ -114,20 +113,20 @@ def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compac
                      compactness=watershed_compactness)
 
 
-def extract_segments(ar: np.ndarray, ar_label: np.ndarray) -> list[np.ndarray]:
+def extract_segments(ar: np.ndarray, ar_segments_mask: np.ndarray) -> list[np.ndarray]:
     """ Extracts segments as a list from a label image.
 
     Args:
         ar: The source image to extract segments from.
-        ar_label: Label Image, where each value is a segment mask.
+        ar_segments_mask: Segments Image, where each integer value is a segment mask.
         
     Returns:
         A list of segments, each segment is of shape (H, W, C).
 
     """
     ar_segments = []
-    for segment_ix in range(np.max(ar_label) + 1):
-        ar_segment_mask = ar_label == segment_ix
+    for segment_ix in range(np.max(ar_segments_mask) + 1):
+        ar_segment_mask = np.array(ar_segments_mask == segment_ix)
         ar_segment = ar.copy()
         ar_segment = np.where(ar_segment_mask[..., None], ar_segment, np.nan)
         ar_segments.append(ar_segment)

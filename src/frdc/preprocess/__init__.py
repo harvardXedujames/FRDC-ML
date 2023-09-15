@@ -1,3 +1,3 @@
-from .preprocess import segment_crowns
+from .preprocess import compute_segments_mask, extract_segments
 
-__all__ = ['segment_crowns']
+__all__ = ['compute_segments_mask', 'extract_segments']
