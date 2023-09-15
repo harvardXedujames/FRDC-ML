@@ -92,7 +92,7 @@ class FRDCDataset:
             # For local path, ROOT   / DATASET DIR / FILENAME
             # For GCS,        BUCKET / DATASET DIR / FILENAME
             local_file_path = self.local_dataset_root_dir / dataset_dir / dataset_file_name
-            gcs_file_path = self.bucket.blob(str(dataset_dir / dataset_file_name))
+            gcs_file_path = self.bucket.blob((dataset_dir / dataset_file_name).as_posix())
 
             # Don't download if the file already exists locally
             if local_file_path.exists():
