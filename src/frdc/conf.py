@@ -6,6 +6,11 @@ SECRETS_DIR = ROOT_DIR / '.secrets'
 GCS_PROJECT_ID = 'frmodel'
 GCS_BUCKET_NAME = 'frdc-scan'
 
+# These are sorted by wavelength
 DATASET_FILE_NAMES = (
-    'result_Blue.tif', 'result_Green.tif', 'result_NIR.tif', 'result_Red.tif', 'result_RedEdge.tif'
+    'result_Blue.tif',
+    'result_Green.tif',
+    'result_Red.tif',
+    'result_RedEdge.tif',
+    'result_NIR.tif'
 )
