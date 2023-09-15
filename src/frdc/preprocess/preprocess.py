@@ -76,12 +76,13 @@ def stack_bands(bands_dict: dict[str, np.ndarray]) -> np.ndarray:
 
 def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
     """ Scales an NDArray from 0 to 1 for each band independently """
-    return np.stack([
-        # I know we can do fancy projections here, but this is more readable.
-        minmax_scale(ar[:, :, band], feature_range=(0, 1))
-        for band in range(ar.shape[-1])],
-        axis=-1
-    )
+    ar_bands = []
+    for band in range(ar.shape[-1]):
+        ar_band = ar[:, :, band]
+        ar_band = (ar_band - np.nanmin(ar_band)) / (np.nanmax(ar_band) - np.nanmin(ar_band))
+        ar_bands.append(ar_band)
+
+    return np.stack(ar_bands, axis=-1)
 
 
 def threshold_binary_mask(ar: np.ndarray, band: Band, threshold_value: float) -> np.ndarray:
