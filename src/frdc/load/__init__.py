@@ -1,4 +1,3 @@
-from .load import load_image
-from .gcs import GCS
+from .frdc_dataset import FRDCDataset
 
-__all__ = ['load_image', 'GCS']
+__all__ = ['FRDCDataset']
