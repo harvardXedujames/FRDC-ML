@@ -126,7 +126,7 @@ def extract_segments(ar: np.ndarray, ar_label: np.ndarray) -> list[np.ndarray]:
 
     """
     ar_segments = []
-    for segment_ix in range(np.max(ar_label)):
+    for segment_ix in range(np.max(ar_label) + 1):
         ar_segment_mask = ar_label == segment_ix
         ar_segment = ar.copy()
         ar_segment = np.where(ar_segment_mask[..., None], ar_segment, np.nan)
