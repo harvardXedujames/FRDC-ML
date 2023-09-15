@@ -8,7 +8,7 @@ from skimage.segmentation import watershed
 from frdc.conf import Band
 
 
-def compute_crown_masks(
+def segment_crowns(
         bands_dict: dict[str, np.ndarray],
         nir_threshold_value=0.5,
         min_crown_size=100,
