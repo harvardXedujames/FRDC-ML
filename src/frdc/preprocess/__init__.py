@@ -1,3 +1,3 @@
-from .preprocess import dummy_preprocess
+from .preprocess import compute_crown_masks
 
-__all__ = ['preprocess']
+__all__ = ['compute_crown_masks']
