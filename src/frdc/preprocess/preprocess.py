@@ -16,7 +16,23 @@ def segment_crowns(
         connectivity=1,
         peaks_footprint=20,
         watershed_compactness=0.1
-):
+) -> tuple[np.ndarray, list[np.ndarray]]:
+    """ Segments crowns from a dictionary of bands.
+
+    Args:
+        bands_dict: Dictionary of bands, with keys as the band names and values as the images.
+        nir_threshold_value: Threshold value for the NIR band.
+        min_crown_size: Minimum crown size in pixels.
+        min_crown_hole: Minimum crown hole size in pixels.
+        connectivity: Connectivity for morphological operations.
+        peaks_footprint: Footprint for peak_local_max.
+        watershed_compactness: Compactness for watershed.
+
+    Returns:
+        A tuple of (background, crowns), background is the background image and crowns is a list of np.ndarray crowns.
+        Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
+        Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
+    """
     ar = stack_bands(bands_dict)
     ar = scale_0_1_per_band(ar)
     ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
