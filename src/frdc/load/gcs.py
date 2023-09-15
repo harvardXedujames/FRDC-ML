@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
 from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, DATASET_FILE_NAMES, GCS_PROJECT_ID, GCS_BUCKET_NAME
-from frdc.utils.utils import get_dataset_dir
+from frdc.load import load_image
 
 
 @dataclass
@@ -36,7 +36,7 @@ class GCS:
         """ Lists all datasets from Google Cloud Storage.
 
         Returns:
-            A DataFrame of all blobs in the bucket, with columns "survey_site", "survey_date", "filename".
+            A DataFrame of all blobs in the bucket, with columns site, date, version.
         """
 
         # The anchor file to find the dataset
@@ -54,18 +54,18 @@ class GCS:
             # E.g. "chestnut_nature_park/20201218/183deg" -> ["chestnut_nature_park", "20201218", "183deg"]
             .str.split("/", expand=True, n=2)
             # Rename the columns
-            # E.g. ["survey_site",           "survey_date", "survey_version"]
-            #       ["chestnut_nature_park", "20201218",    "183deg"]
-            .rename(columns={0: "survey_site", 1: "survey_date", 2: "survey_version"})
+            # E.g. ["site",                 "date",     "version"]
+            #      ["chestnut_nature_park", "20201218", "183deg"]
+            .rename(columns={0: "site", 1: "date", 2: "version"})
             # Drop any dupes (likely none)
             .drop_duplicates()
             .reset_index(drop=True)
-            .set_index(['survey_site', 'survey_date'])
+            .set_index(['site', 'date'])
         )
 
         return df
 
-    def download_dataset(self, *, site: str, date: str, version: str | None, dryrun: bool = True):
+    def download_dataset(self, *, site: str, date: str, version: str | None, dryrun: bool = True) -> Path | None:
         """ Downloads a dataset from Google Cloud Storage.
 
         Notes:
@@ -76,21 +76,30 @@ class GCS:
             date: Survey date in YYYYMMDD format.
             version: Survey version, can be None.
             dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
+
+        Raises:
+            FileNotFoundError: If the dataset does not exist in GCS.
+
+        Returns:
+            The local dataset directory of the downloaded dataset if successful, else None.
         """
 
         # The directory to the files in the bucket, also locally
-        dataset_dir = get_dataset_dir(site, date, version)
+        dataset_dir = self.get_dataset_dir(site, date, version)
 
         for dataset_file_name in self.dataset_file_names:
             # Define full paths to the file in the bucket, also locally
-            dataset_file_path = dataset_dir + dataset_file_name
-            local_file_path = self.local_dataset_root_dir / dataset_file_path
-            gcs_file_path = self.bucket.blob(dataset_file_path)
+            # For local path, ROOT   / DATASET DIR / FILENAME
+            # For GCS,        BUCKET / DATASET DIR / FILENAME
+            local_file_path = self.local_dataset_root_dir / dataset_dir / dataset_file_name
+            gcs_file_path = self.bucket.blob(str(dataset_dir / dataset_file_name))
 
+            # Don't download if the file already exists locally
             if local_file_path.exists():
                 print(f"{local_file_path} already exists, skipping...")
                 continue
 
+            # Else, download from GCS
             if gcs_file_path.exists():
                 print(f"Downloading {gcs_file_path.name} to {local_file_path}...")
                 if not dryrun:
@@ -99,7 +108,9 @@ class GCS:
                     # Then download from gcs
                     gcs_file_path.download_to_filename(local_file_path.as_posix())
             else:
-                warnings.warn(f"{gcs_file_path.name=} not found")
+                raise FileNotFoundError(f"{gcs_file_path} does not exist in GCS.")
+
+        return self.local_dataset_root_dir / dataset_dir
 
     def download_datasets(self, site_filter: str | list[str] = None, dryrun: bool = True):
         """ Downloads all datasets from Google Cloud Storage.
@@ -109,7 +120,7 @@ class GCS:
             dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
         """
 
-        # Force the filter as a list, so that when .loc[] is called, it returns the survey_site_filter as an index.
+        # Force the filter as a list, so that when .loc[] is called, it returns the site_filter as an index.
         site_filter = [site_filter] if isinstance(site_filter, str) else site_filter
 
         datasets = self.list_gcs_datasets() \
@@ -119,5 +130,41 @@ class GCS:
         for _, args in datasets.reset_index().iterrows():
             self.download_dataset(**args, dryrun=dryrun)
 
-    def load_dataset(self, *, site: str, date: str, version: str | None, download_if_missing: bool = True):
-        ...
+    def load_dataset(self, *, site: str, date: str, version: str | None) -> dict[str, np.ndarray]:
+        """ Loads a dataset from Google Cloud Storage.
+
+        Notes:
+            Retrieve all valid site, date, version combinations from `list_gcs_datasets()`.
+            Will download the dataset if it does not exist locally.
+
+        Args:
+            site: Survey site name.
+            date: Survey date in YYYYMMDD format.
+            version: Survey version, can be None.
+
+        Returns:
+            A dictionary of the dataset, with keys as the filenames and values as the images.
+        """
+        local_dataset_dir = self.download_dataset(site=site, date=date, version=version, dryrun=False)
+        return {filename: load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
+
+    def _load_debug_dataset(self) -> dict[str, np.ndarray]:
+        """ Loads a debug dataset from Google Cloud Storage.
+
+        Returns:
+            A dictionary of the dataset, with keys as the filenames and values as the images.
+        """
+        return self.load_dataset(site='DEBUG', date='0', version=None)
+
+    def get_dataset_dir(self, site: str, date: str, version: str | None) -> Path:
+        """ Formats a dataset directory.
+
+        Args:
+            site: Survey site name.
+            date: Survey date in YYYYMMDD format.
+            version: Survey version, can be None.
+
+        Returns:
+            Dataset directory.
+        """
+        return Path(f"{site}/{date}/{version + '/' if version else ''}")
