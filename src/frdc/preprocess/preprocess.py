@@ -4,7 +4,6 @@ from scipy.ndimage import distance_transform_edt
 from skimage.feature import peak_local_max
 from skimage.morphology import remove_small_objects, remove_small_holes
 from skimage.segmentation import watershed
-from sklearn.preprocessing import minmax_scale
 
 from frdc.conf import Band
 
@@ -50,10 +49,18 @@ def compute_crown_masks(
     ar_watershed = watershed(image=-ar_watershed_depth,
                              markers=ar_watershed_basins,
                              mask=ar_mask,
-                             watershed_line=True,
+                             # watershed_line=True, # Enable this to see the watershed lines
                              compactness=watershed_compactness)
 
-    return ar, ar_watershed
+    ar_crowns = []
+    for crown_ix in range(0, np.max(ar_watershed)):
+        ar_crown_mask = ar_watershed == crown_ix
+        ar_crown = ar.copy()
+        ar_crown = np.where(ar_crown_mask[..., None], ar_crown, np.nan)
+        ar_crowns.append(ar_crown)
+
+    ar_background, *ar_crowns = ar_crowns
+    return ar_background, ar_crowns
 
 
 def stack_bands(bands_dict: dict[str, np.ndarray]) -> np.ndarray:
