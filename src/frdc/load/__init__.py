@@ -1,3 +1,3 @@
-from .load import load_image
+from .frdc_dataset import FRDCDataset
 
-__all__ = ['load_image']
+__all__ = ['FRDCDataset']
