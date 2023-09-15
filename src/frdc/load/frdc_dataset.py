@@ -5,15 +5,15 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
-from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, DATASET_FILE_NAMES, GCS_PROJECT_ID, GCS_BUCKET_NAME
-from frdc.load import load_image
+from frdc.conf import LOCAL_DATASET_ROOT_DIR, DATASET_FILE_NAMES, SECRETS_DIR, GCS_PROJECT_ID, GCS_BUCKET_NAME
 
 
 @dataclass
-class GCS:
+class FRDCDataset:
     credentials: Credentials = None
     local_dataset_root_dir: Path = LOCAL_DATASET_ROOT_DIR
     project_id: str = GCS_PROJECT_ID
@@ -146,7 +146,7 @@ class GCS:
             A dictionary of the dataset, with keys as the filenames and values as the images.
         """
         local_dataset_dir = self.download_dataset(site=site, date=date, version=version, dryrun=False)
-        return {filename: load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
+        return {filename: self.load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
 
     def _load_debug_dataset(self) -> dict[str, np.ndarray]:
         """ Loads a debug dataset from Google Cloud Storage.
@@ -156,7 +156,8 @@ class GCS:
         """
         return self.load_dataset(site='DEBUG', date='0', version=None)
 
-    def get_dataset_dir(self, site: str, date: str, version: str | None) -> Path:
+    @staticmethod
+    def get_dataset_dir(site: str, date: str, version: str | None) -> Path:
         """ Formats a dataset directory.
 
         Args:
