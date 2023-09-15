@@ -9,7 +9,7 @@ from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
-from frdc.conf import LOCAL_DATASET_ROOT_DIR, DATASET_FILE_NAMES, SECRETS_DIR, GCS_PROJECT_ID, GCS_BUCKET_NAME
+from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, GCS_PROJECT_ID, GCS_BUCKET_NAME, Band
 
 
 @dataclass
@@ -19,7 +19,7 @@ class FRDCDataset:
     project_id: str = GCS_PROJECT_ID
     bucket_name: str = GCS_BUCKET_NAME
     bucket: storage.Bucket = field(init=False)
-    dataset_file_names: tuple[str] = DATASET_FILE_NAMES
+    dataset_file_names: tuple[str] = Band.FILE_NAMES
 
     def __post_init__(self):
         # We pull the credentials here instead of the constructor for try-except block to catch the FileNotFoundError
