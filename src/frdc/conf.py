@@ -8,6 +8,7 @@ GCS_BUCKET_NAME = 'frdc-scan'
 
 
 # These are sorted by wavelength
+# TODO: Is this a bit ugly? I'm not sure if there's a better way to do this.
 class Band:
     BLUE = 0
     GREEN = 1

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from frdc.conf import DATASET_FILE_NAMES
+from frdc.conf import Band
 from frdc.load import FRDCDataset
 
 
@@ -26,6 +26,6 @@ def test_list_datasets(ds):
 def test_load_dataset(ds):
     # Loading the debug dataset indirectly tests the load_dataset method.
     dataset = ds._load_debug_dataset()
-    assert len(dataset) == len(DATASET_FILE_NAMES)
+    assert len(dataset) == len(Band.FILE_NAMES)
     for value in dataset.values():
         assert isinstance(value, np.ndarray)
