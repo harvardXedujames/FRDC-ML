@@ -33,7 +33,8 @@ def compute_segments_mask(
         Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
     """
-    ar = scale_0_1_per_band(ar)
+    # ar = scale_0_1_per_band(ar)
+    ar = scale_static_per_band(ar)
     ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size, connectivity=connectivity)
     ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole, connectivity=connectivity)
@@ -54,6 +55,18 @@ def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
         ar_bands.append(ar_band)
 
     return np.stack(ar_bands, axis=-1)
+
+
+def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
+    """ This scales statically, by their defined maximum   """
+    ar = ar.copy()
+    ar[:, :, Band.BLUE] /= Band.BLUE_MAX
+    ar[:, :, Band.GREEN] /= Band.GREEN_MAX
+    ar[:, :, Band.RED] /= Band.RED_MAX
+    ar[:, :, Band.RED_EDGE] /= Band.RED_EDGE_MAX
+    ar[:, :, Band.NIR] /= Band.NIR_MAX
+
+    return ar
 
 
 def threshold_binary_mask(ar: np.ndarray, band: Band, threshold_value: float) -> np.ndarray:
@@ -119,7 +132,7 @@ def extract_segments(ar: np.ndarray, ar_segments_mask: np.ndarray) -> list[np.nd
     Args:
         ar: The source image to extract segments from.
         ar_segments_mask: Segments Image, where each integer value is a segment mask.
-        
+
     Returns:
         A list of segments, each segment is of shape (H, W, C).
 
