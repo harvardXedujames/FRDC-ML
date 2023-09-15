@@ -9,7 +9,7 @@ from frdc.conf import Band
 
 
 def segment_crowns(
-        bands_dict: dict[str, np.ndarray],
+        ar: np.ndarray,
         nir_threshold_value=0.5,
         min_crown_size=100,
         min_crown_hole=100,
@@ -20,7 +20,7 @@ def segment_crowns(
     """ Segments crowns from a dictionary of bands.
 
     Args:
-        bands_dict: Dictionary of bands, with keys as the band names and values as the images.
+        ar: NDArray of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         nir_threshold_value: Threshold value for the NIR band.
         min_crown_size: Minimum crown size in pixels.
         min_crown_hole: Minimum crown hole size in pixels.
@@ -33,7 +33,6 @@ def segment_crowns(
         Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
     """
-    ar = stack_bands(bands_dict)
     ar = scale_0_1_per_band(ar)
     ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size, connectivity=connectivity)
@@ -43,26 +42,12 @@ def segment_crowns(
     return ar_background, ar_crowns
 
 
-def stack_bands(bands_dict: dict[str, np.ndarray]) -> np.ndarray:
-    """ Stacks bands into a single image according to DATASET_FILE_NAMES order, which is sorted by wavelength.
-
-    Examples:
-        >>> from frdc.load import FRDCDataset
-        >>> bands_dict = FRDCDataset().load_dataset(site='DEBUG', date='0', version=None)
-        >>> stacked = stack_bands(bands_dict)
+def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
+    """ Scales an NDArray from 0 to 1 for each band independently
 
     Args:
-        bands_dict: Dictionary of bands, with keys as the band names and values as the images.
-
-    Returns:
-        Stacked image. Shape is (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
-
+        ar: NDArray of shape (H, W, C), where C is the number of bands.
     """
-    return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
-
-
-def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
-    """ Scales an NDArray from 0 to 1 for each band independently """
     ar_bands = []
     for band in range(ar.shape[-1]):
         ar_band = ar[:, :, band]
