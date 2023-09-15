@@ -7,7 +7,7 @@ from frdc.train.train import dummy_train
 
 
 def test_pipeline():
-    bands_dict = FRDCDataset()._load_debug_dataset()
-    ar_background, ar_crowns = segment_crowns(bands_dict)
+    ar = FRDCDataset()._load_debug_dataset()
+    ar_background, ar_crowns = segment_crowns(ar)
     model = dummy_train(np.stack(ar_crowns))
     evaluate = dummy_evaluate(model, np.stack(ar_crowns))
