@@ -14,6 +14,14 @@ from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, GCS_PROJECT_ID, GCS_B
 
 @dataclass
 class FRDCDataset:
+    ar_bands: np.ndarray
+    site: str
+    date: str
+    version: str | None
+
+
+@dataclass
+class FRDCDownloader:
     credentials: Credentials = None
     local_dataset_root_dir: Path = LOCAL_DATASET_ROOT_DIR
     project_id: str = GCS_PROJECT_ID
@@ -85,7 +93,7 @@ class FRDCDataset:
         """
 
         # The directory to the files in the bucket, also locally
-        dataset_dir = self.get_dataset_dir(site, date, version)
+        dataset_dir = self._get_dataset_dir(site, date, version)
 
         for dataset_file_name in self.dataset_file_names:
             # Define full paths to the file in the bucket, also locally
@@ -130,7 +138,7 @@ class FRDCDataset:
         for _, args in datasets.reset_index().iterrows():
             self.download_dataset(**args, dryrun=dryrun)
 
-    def load_dataset(self, *, site: str, date: str, version: str | None) -> np.ndarray:
+    def load_dataset(self, *, site: str, date: str, version: str | None) -> FRDCDataset:
         """ Loads a dataset from Google Cloud Storage.
 
         Notes:
@@ -146,10 +154,11 @@ class FRDCDataset:
             A numpy array of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         """
         local_dataset_dir = self.download_dataset(site=site, date=date, version=version, dryrun=False)
-        bands_dict = {filename: self.load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
-        return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
+        bands_dict = {filename: self._load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
+        ar_bands = np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
+        return FRDCDataset(ar_bands=ar_bands, site=site, date=date, version=version)
 
-    def _load_debug_dataset(self) -> np.ndarray:
+    def _load_debug_dataset(self) -> FRDCDataset:
         """ Loads a debug dataset from Google Cloud Storage.
 
         Returns:
@@ -158,7 +167,7 @@ class FRDCDataset:
         return self.load_dataset(site='DEBUG', date='0', version=None)
 
     @staticmethod
-    def get_dataset_dir(site: str, date: str, version: str | None) -> Path:
+    def _get_dataset_dir(site: str, date: str, version: str | None) -> Path:
         """ Formats a dataset directory.
 
         Args:
@@ -172,7 +181,7 @@ class FRDCDataset:
         return Path(f"{site}/{date}/{version + '/' if version else ''}")
 
     @staticmethod
-    def load_image(path: Path | str) -> np.ndarray:
+    def _load_image(path: Path | str) -> np.ndarray:
         """ Loads an Image from a path.
 
         Args:
