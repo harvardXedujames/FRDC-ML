@@ -141,9 +141,10 @@ class FRDCDataset:
         # Sort the bands by the order in Band.FILE_NAMES
         return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
-    def get_bounds(self, file_name='bounds.csv') -> pd.DataFrame:
+    def get_bounds(self, file_name='bounds.csv') -> list[tuple[int, int, int, int]]:
         fp = self.dl.download_file(path=self.dataset_dir / file_name)
-        return pd.read_csv(fp)
+        df = pd.read_csv(fp)
+        return [(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()]
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:

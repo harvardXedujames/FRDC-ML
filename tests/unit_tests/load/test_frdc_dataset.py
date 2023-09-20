@@ -1,12 +1,6 @@
 import pytest
 
 from frdc.conf import Band
-from frdc.load import FRDCDownloader
-
-
-@pytest.fixture(scope='module')
-def dl():
-    return FRDCDownloader()
 
 
 def test_download_file_exist_ok(dl):

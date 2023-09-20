@@ -1,3 +1,4 @@
+from frdc.preprocess import extract_segments_from_labels
 from frdc.preprocess.preprocess import *
 
 
@@ -36,7 +37,7 @@ def test_extract_segments():
         [[0, 1],
          [2, 3]]
     )
-    ar_segments = extract_segments(ar_source, ar_label)
+    ar_segments = extract_segments_from_labels(ar_source, ar_label, cropped=False)
     assert np.isclose(ar_segments[0], np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]), equal_nan=True).all()
     assert np.isclose(ar_segments[1], np.array([[[np.nan], [20]], [[np.nan], [np.nan]]]), equal_nan=True).all()
     assert np.isclose(ar_segments[2], np.array([[[np.nan], [np.nan]], [[30], [np.nan]]]), equal_nan=True).all()

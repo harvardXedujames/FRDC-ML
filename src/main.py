@@ -4,12 +4,12 @@ from matplotlib import pyplot as plt
 from skimage import measure
 
 from frdc.load import FRDCDownloader
-from frdc.preprocess.preprocess import extract_segments, compute_segments_mask, scale_0_1_per_band
+from frdc.preprocess.preprocess import extract_mask_segments, compute_labels, scale_0_1_per_band
 
 # %%
 ar = FRDCDownloader().load_dataset(site='chestnut_nature_park', date='20201218', version=None)
 # %%
-ar_segments_mask = compute_segments_mask(
+ar_segments_mask = compute_labels(
     ar, peaks_footprint=200, min_crown_hole=3000, min_crown_size=3000,
     connectivity=1, watershed_compactness=10,
 )
@@ -18,7 +18,7 @@ plt.show()
 # %%
 ar_segments_mask.max()
 # %%
-ar_segments = extract_segments(scale_0_1_per_band(ar), ar_segments_mask)
+ar_segments = extract_mask_segments(scale_0_1_per_band(ar), ar_segments_mask)
 # %%
 ar_segments = sorted(ar_segments, key=lambda x: x.size, reverse=True)
 #%%
