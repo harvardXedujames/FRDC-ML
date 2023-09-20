@@ -11,6 +11,7 @@ def extract_segments_from_labels(
     Args:
         ar: The source image to extract segments from.
         ar_labels: Labelled Image, where each integer value is a segment mask.
+        cropped: Whether to crop the segments to the smallest possible size.
 
     Returns:
         A list of segments, each segment is of shape (H, W, C).
@@ -41,6 +42,7 @@ def extract_segments_from_bounds(
     Args:
         ar: The source image to extract segments from.
         bounds: The bounds of the segment to extract. (x0, y0, x1, y1)
+        cropped: Whether to crop the segments to the smallest possible size.
 
     Returns:
         A list of segments, each segment is of shape (H, W, C).
