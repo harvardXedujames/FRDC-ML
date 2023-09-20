@@ -17,12 +17,14 @@ from frdc.preprocess import extract_segments_from_bounds, extract_segments_from_
 
 
 def test_extract_segments_from_bounds_cropped(ds):
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), ds.get_bounds(), cropped=True)
+    bounds, labels = ds.get_bounds_and_labels()
+    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
 def test_extract_segments_from_bounds_no_crop(ds):
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), ds.get_bounds(), cropped=False)
+    bounds, labels = ds.get_bounds_and_labels()
+    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
 
 

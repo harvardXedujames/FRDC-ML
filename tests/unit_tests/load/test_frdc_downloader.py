@@ -1,4 +1,3 @@
-import pandas as pd
 import pytest
 
 from frdc.conf import Band
@@ -25,6 +24,6 @@ def test_get_ar_bands(ds):
 
 
 def test_get_bounds(ds):
-    df_bounds = ds.get_bounds()
-    # TODO: Improve test
-    assert isinstance(df_bounds, list)
+    bounds, labels = ds.get_bounds_and_labels()
+    assert all([len(b) == 4 for b in bounds])
+    assert len(bounds) == len(labels)

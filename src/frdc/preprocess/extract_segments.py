@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import numpy as np
 
 
@@ -34,10 +36,10 @@ def extract_segments_from_labels(
 
 def extract_segments_from_bounds(
         ar: np.ndarray,
-        bounds: list[tuple[int, int, int, int]],
+        bounds: Iterable[Iterable[int]],
         cropped: bool = True
 ) -> list[np.ndarray]:
-    """ Extracts segments as a list from a label image.
+    """ Extracts segments as a list from bounds
 
     Args:
         ar: The source image to extract segments from.

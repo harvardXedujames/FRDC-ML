@@ -5,6 +5,7 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -141,10 +142,10 @@ class FRDCDataset:
         # Sort the bands by the order in Band.FILE_NAMES
         return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
-    def get_bounds(self, file_name='bounds.csv') -> list[tuple[int, int, int, int]]:
+    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Iterable[int]], Iterable[str]]:
         fp = self.dl.download_file(path=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
-        return [(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()]
+        return [(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()], df['name'].tolist()
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
