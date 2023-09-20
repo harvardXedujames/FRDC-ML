@@ -1,3 +1,3 @@
-from .frdc_dataset import FRDCDataset
+from .dataset import FRDCDownloader, FRDCDataset
 
-__all__ = ['FRDCDataset']
+__all__ = ['FRDCDownloader', 'FRDCDataset']
