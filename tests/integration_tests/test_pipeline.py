@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.preprocessing import LabelEncoder
 
 from frdc.evaluate import dummy_evaluate
 from frdc.load import FRDCDataset
@@ -16,27 +17,15 @@ def test_auto_segmentation_pipeline():
 
 
 def test_manual_segmentation_pipeline():
-    """ Test the manual segmentation pipeline. This is after we manually segment the dataset. """
-
-    ds = FRDCDataset._load_debug_dataset()
-    ar = ds.get_ar_bands()
-    bounds = ds.get_bounds()
-    segments = extract_segments_from_bounds(ar, bounds, cropped=False)
-    ar_segments = np.stack(segments, axis=-1)
-
-
-def test_pipeline():
     """ Test the whole pipeline. """
     ds = FRDCDataset._load_debug_dataset()
     ar = ds.get_ar_bands()
-    ar_labels = compute_labels(ar)
-    ar_segments = extract_segments_from_labels(ar, ar_labels, cropped=False)
+    ar = np.nan_to_num(ar)
+    bounds, labels = ds.get_bounds_and_labels()
+    segments = extract_segments_from_bounds(ar, bounds, cropped=False)
 
-    # 1: to skip the background
-    X = np.stack(ar_segments[1:])
-
-    # TODO: Randomly generate y for now.
-    y = np.random.randint(0, 3, size=(X.shape[0]))
+    X = np.stack(segments)
+    y = LabelEncoder().fit_transform(labels)
 
     # TODO: We'll need to be smart on how we split the data.
     X_train, X_val, X_test = X[:-6], X[-6:-3], X[-3:]
