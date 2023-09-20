@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,21 +16,12 @@ from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, GCS_PROJECT_ID, GCS_B
 
 
 @dataclass
-class FRDCDataset:
-    ar_bands: np.ndarray
-    site: str
-    date: str
-    version: str | None
-
-
-@dataclass
 class FRDCDownloader:
     credentials: Credentials = None
     local_dataset_root_dir: Path = LOCAL_DATASET_ROOT_DIR
     project_id: str = GCS_PROJECT_ID
     bucket_name: str = GCS_BUCKET_NAME
     bucket: storage.Bucket = field(init=False)
-    dataset_file_names: tuple[str] = Band.FILE_NAMES
 
     def __post_init__(self):
         # We pull the credentials here instead of the constructor for try-except block to catch the FileNotFoundError
@@ -40,17 +34,22 @@ class FRDCDownloader:
         client = storage.Client(project=self.project_id, credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
-    def list_gcs_datasets(self) -> pd.DataFrame:
+    def list_gcs_datasets(self, anchor=Band.FILE_NAMES[0]) -> pd.DataFrame:
         """ Lists all datasets from Google Cloud Storage.
+
+        Args:
+            anchor: The anchor file to find the dataset.
+                    This is used to find the dataset. For example, if we want to find the dataset for
+                    "chestnut_nature_park/20201218/183deg/result_Red.tif", then we can use "result_Red.tif" as the
+                    anchor file.
 
         Returns:
             A DataFrame of all blobs in the bucket, with columns site, date, version.
+
         """
 
         # The anchor file to find the dataset
         # E.g. "result_Red.tif"
-        anchor = self.dataset_file_names[0]
-
         df = (
             # The list of all blobs in the bucket that contains the anchor file
             # E.g. "chestnut_nature_park/20201218/183deg/result_Red.tif"
@@ -58,127 +57,93 @@ class FRDCDownloader:
             # Remove the anchor file name
             # E.g. "chestnut_nature_park/20201218/183deg"
             .str.replace(f"/{anchor}", "")
-            # Split the path into columns
-            # E.g. "chestnut_nature_park/20201218/183deg" -> ["chestnut_nature_park", "20201218", "183deg"]
-            .str.split("/", expand=True, n=2)
-            # Rename the columns
-            # E.g. ["site",                 "date",     "version"]
-            #      ["chestnut_nature_park", "20201218", "183deg"]
-            .rename(columns={0: "site", 1: "date", 2: "version"})
-            # Drop any dupes (likely none)
+            .rename("dataset_dir")
             .drop_duplicates()
-            .reset_index(drop=True)
-            .set_index(['site', 'date'])
         )
 
         return df
 
-    def download_dataset(self, *, site: str, date: str, version: str | None, dryrun: bool = True) -> Path | None:
-        """ Downloads a dataset from Google Cloud Storage.
-
-        Notes:
-            Retrieve all valid site, date, version combinations from `list_gcs_datasets()`.
+    def download_file(self, *, path: Path | str, local_exists_ok: bool = True) -> Path:
+        """ Downloads a file from Google Cloud Storage. If the file already exists locally, and the hashes match, it
+        will not download the file.
 
         Args:
-            site: Survey site name.
-            date: Survey date in YYYYMMDD format.
-            version: Survey version, can be None.
-            dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
+            path: Path to the file in GCS.
+            local_exists_ok: If True, will not raise an error if the file already exists locally and the hashes match.
+
+        Examples:
+            If our file in GCS is in gs://frdc-scan/casuarina/20220418/183deg/result_Blue.tif
+            then we can download it with:
+            >>> download_file(path=Path("casuarina/20220418/183deg/result_Blue.tif"))
 
         Raises:
-            FileNotFoundError: If the dataset does not exist in GCS.
+            FileNotFoundError: If the file does not exist in GCS.
+            FileExistsError: If the file already exists locally and the hashes match.
 
         Returns:
-            The local dataset directory of the downloaded dataset if successful, else None.
+            The local path to the downloaded file.
         """
+        local_path = self.local_dataset_root_dir / path
+        gcs_path = path.as_posix() if isinstance(path, Path) else path
+        gcs_blob = self.bucket.blob(gcs_path)
 
-        # The directory to the files in the bucket, also locally
-        dataset_dir = self._get_dataset_dir(site, date, version)
+        # If not exists in GCS, raise error
+        if not gcs_blob.exists():
+            raise FileNotFoundError(f"{gcs_path} does not exist in GCS.")
 
-        for dataset_file_name in self.dataset_file_names:
-            # Define full paths to the file in the bucket, also locally
-            # For local path, ROOT   / DATASET DIR / FILENAME
-            # For GCS,        BUCKET / DATASET DIR / FILENAME
-            local_file_path = self.local_dataset_root_dir / dataset_dir / dataset_file_name
-            gcs_file_path = self.bucket.blob((dataset_dir / dataset_file_name).as_posix())
+        # If locally exists & hashes match, return False
+        if local_path.exists():
+            gcs_blob.reload()  # Necessary to get the md5_hash
+            gcs_hash = base64.b64decode(gcs_blob.md5_hash).hex()
+            local_hash = hashlib.md5(open(local_path, 'rb').read()).hexdigest()
+            logging.debug(f"Local hash: {local_hash}, GCS hash: {gcs_hash}")
+            if gcs_hash == local_hash:
+                if local_exists_ok:
+                    # If local_exists_ok, then don't raise
+                    return local_path
+                else:
+                    raise FileExistsError(f"{local_path} already exists and hashes match.")
 
-            # Don't download if the file already exists locally
-            if local_file_path.exists():
-                print(f"{local_file_path} already exists, skipping...")
-                continue
+        # Else, download
+        logging.info(f"Downloading {gcs_blob.name} to {local_path}...")
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        gcs_blob.download_to_filename(local_path.as_posix())
+        return local_path
 
-            # Else, download from GCS
-            if gcs_file_path.exists():
-                print(f"Downloading {gcs_file_path.name} to {local_file_path}...")
-                if not dryrun:
-                    # Create dir locally
-                    local_file_path.parent.mkdir(parents=True, exist_ok=True)
-                    # Then download from gcs
-                    gcs_file_path.download_to_filename(local_file_path.as_posix())
-            else:
-                raise FileNotFoundError(f"{gcs_file_path} does not exist in GCS.")
 
-        return self.local_dataset_root_dir / dataset_dir
+@dataclass
+class FRDCDataset:
+    site: str
+    date: str
+    version: str | None
+    dl: FRDCDownloader = field(default_factory=FRDCDownloader)
 
-    def download_datasets(self, site_filter: str | list[str] = None, dryrun: bool = True):
-        """ Downloads all datasets from Google Cloud Storage.
-        
-        Args:
-            site_filter: If not None, only downloads datasets with the specified site_filter.
-            dryrun: If True, does not download the dataset, but only prints the files to be downloaded.
-        """
-
-        # Force the filter as a list, so that when .loc[] is called, it returns the site_filter as an index.
-        site_filter = [site_filter] if isinstance(site_filter, str) else site_filter
-
-        datasets = self.list_gcs_datasets() \
-            if site_filter is None \
-            else self.list_gcs_datasets().loc[site_filter]
-
-        for _, args in datasets.reset_index().iterrows():
-            self.download_dataset(**args, dryrun=dryrun)
-
-    def load_dataset(self, *, site: str, date: str, version: str | None) -> FRDCDataset:
-        """ Loads a dataset from Google Cloud Storage.
-
-        Notes:
-            Retrieve all valid site, date, version combinations from `list_gcs_datasets()`.
-            Will download the dataset if it does not exist locally.
-
-        Args:
-            site: Survey site name.
-            date: Survey date in YYYYMMDD format.
-            version: Survey version, can be None.
-
-        Returns:
-            A numpy array of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
-        """
-        local_dataset_dir = self.download_dataset(site=site, date=date, version=version, dryrun=False)
-        bands_dict = {filename: self._load_image(local_dataset_dir / filename) for filename in self.dataset_file_names}
-        ar_bands = np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
-        return FRDCDataset(ar_bands=ar_bands, site=site, date=date, version=version)
-
-    def _load_debug_dataset(self) -> FRDCDataset:
+    @staticmethod
+    def _load_debug_dataset() -> FRDCDataset:
         """ Loads a debug dataset from Google Cloud Storage.
 
         Returns:
             A dictionary of the dataset, with keys as the filenames and values as the images.
         """
-        return self.load_dataset(site='DEBUG', date='0', version=None)
+        return FRDCDataset(site='DEBUG', date='0', version=None)
 
-    @staticmethod
-    def _get_dataset_dir(site: str, date: str, version: str | None) -> Path:
-        """ Formats a dataset directory.
+    @property
+    def dataset_dir(self):
+        return Path(f"{self.site}/{self.date}/{self.version + '/' if self.version else ''}")
 
-        Args:
-            site: Survey site name.
-            date: Survey date in YYYYMMDD format.
-            version: Survey version, can be None.
+    def get_ar_bands(self, band_names=Band.FILE_NAMES) -> np.ndarray:
+        bands_dict = {}
+        for band_name in band_names:
+            fp = self.dl.download_file(path=self.dataset_dir / band_name)
+            ar_im = self._load_image(fp)
+            bands_dict[band_name] = ar_im
 
-        Returns:
-            Dataset directory.
-        """
-        return Path(f"{site}/{date}/{version + '/' if version else ''}")
+        # Sort the bands by the order in Band.FILE_NAMES
+        return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
+
+    def get_bounds(self, file_name='bounds.csv') -> pd.DataFrame:
+        fp = self.dl.download_file(path=self.dataset_dir / file_name)
+        return pd.read_csv(fp)
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
