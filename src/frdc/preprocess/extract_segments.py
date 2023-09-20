@@ -54,7 +54,7 @@ def extract_segments_from_bounds(
             ar_segments.append(ar[x0:x1, y0:y1])
         else:
             ar_segment_mask = np.zeros(ar.shape[:2], dtype=bool)
-            ar_segment_mask[x0:x1, y0:y1] = True
+            ar_segment_mask[y0:y1, x0:x1] = True
             ar_segment = np.where(ar_segment_mask[..., None], ar, np.nan)
             ar_segments.append(ar_segment)
     return ar_segments
