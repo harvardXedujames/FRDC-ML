@@ -7,18 +7,16 @@ from frdc.preprocess import compute_labels, extract_segments_from_labels, extrac
 from frdc.train import dummy_train
 
 
-def test_auto_segmentation_pipeline():
+def test_auto_segmentation_pipeline(ds):
     """ Test the auto segmentation pipeline. This is used to preliminarily extract segments from the dataset. """
 
-    ds = FRDCDataset._load_debug_dataset()
     ar = ds.get_ar_bands()
     ar_labels = compute_labels(ar)
     ar_segments = extract_segments_from_labels(ar, ar_labels)
 
 
-def test_manual_segmentation_pipeline():
+def test_manual_segmentation_pipeline(ds):
     """ Test the whole pipeline. """
-    ds = FRDCDataset._load_debug_dataset()
     ar = ds.get_ar_bands()
     ar = np.nan_to_num(ar)
     bounds, labels = ds.get_bounds_and_labels()
