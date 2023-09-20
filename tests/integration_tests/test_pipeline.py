@@ -1,7 +1,7 @@
 import numpy as np
 
 from frdc.evaluate import dummy_evaluate
-from frdc.load import FRDCDownloader
+from frdc.load import FRDCDownloader, FRDCDataset
 from frdc.preprocess import compute_segments_mask, extract_segments
 from frdc.train import dummy_train
 
@@ -9,8 +9,8 @@ from frdc.train import dummy_train
 def test_auto_segmentation_pipeline():
     """ Test the auto segmentation pipeline. This is used to preliminarily extract segments from the dataset. """
 
-    ds = FRDCDownloader()._load_debug_dataset()
-    ar = ds.ar_bands
+    ds = FRDCDataset._load_debug_dataset()
+    ar = ds.get_ar_bands()
     ar_segments_mask = compute_segments_mask(ar)
     ar_segments = extract_segments(ar, ar_segments_mask)
 
@@ -18,8 +18,8 @@ def test_auto_segmentation_pipeline():
 def test_manual_segmentation_pipeline():
     """ Test the manual segmentation pipeline. This is after we manually segment the dataset. """
 
-    ds = FRDCDownloader()._load_debug_dataset()
-    ar = ds.ar_bands
+    ds = FRDCDataset._load_debug_dataset()
+    ar = ds.get_ar_bands()
     # This is a trivial example of manual segmentation, which bins the first band into 4 segments with equal quantiles.
     # In production, this will be loaded from a ground truth mask.
     qs = [0, 0.25, 0.5, 0.75, 1]
@@ -38,8 +38,8 @@ def test_manual_segmentation_pipeline():
 
 def test_pipeline():
     """ Test the whole pipeline. """
-    ds = FRDCDownloader()._load_debug_dataset()
-    ar = ds.ar_bands
+    ds = FRDCDataset._load_debug_dataset()
+    ar = ds.get_ar_bands()
     ar_segments_mask = compute_segments_mask(ar)
     ar_segments = extract_segments(ar, ar_segments_mask)
 
