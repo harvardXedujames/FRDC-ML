@@ -81,9 +81,10 @@ def extract_segments_from_bounds(
 
     """
     ar_segments = []
-    for x0, y0, x1, y1 in bounds:
+    for b in bounds:
+        x0, y0, x1, y1 = b.x0, b.x1, b.y0, b.y1
         if cropped:
-            ar_segments.append(ar[x0:x1, y0:y1])
+            ar_segments.append(ar[y0:y1, x0:x1])
         else:
             ar_segment_mask = np.zeros(ar.shape[:2], dtype=bool)
             ar_segment_mask[y0:y1, x0:x1] = True
