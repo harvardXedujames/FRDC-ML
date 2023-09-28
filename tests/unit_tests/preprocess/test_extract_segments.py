@@ -29,12 +29,12 @@ def test_extract_segments_from_bounds_no_crop(ds):
 
 
 def test_extract_segments_from_labels_cropped(ds):
-    ar_labels = compute_labels(ds.get_ar_bands())
+    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
     segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
 def test_extract_segments_from_labels_no_crop(ds):
-    ar_labels = compute_labels(ds.get_ar_bands())
+    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
     segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
