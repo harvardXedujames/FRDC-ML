@@ -14,6 +14,7 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
 from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, GCS_PROJECT_ID, GCS_BUCKET_NAME, Band
+from frdc.utils.utils import Rect
 
 
 @dataclass
@@ -143,9 +144,21 @@ class FRDCDataset:
         return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
     def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Iterable[int]], Iterable[str]]:
+        """ Gets the bounds and labels from the bounds.csv file.
+
+        Notes:
+            In the context of np.ndarray, to slice with x, y coordinates, you need to slice
+            with [y0:y1, x0:x1]. Which is different from the bounds.csv file.
+
+        Args:
+            file_name: The name of the bounds.csv file.
+
+        Returns:
+            A tuple of (bounds, labels), where bounds is a list of (x0, y0, x1, y1) and labels is a list of labels.
+        """
         fp = self.dl.download_file(path=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
-        return [(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()], df['name'].tolist()
+        return [Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()], df['name'].tolist()
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
