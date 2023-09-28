@@ -143,7 +143,7 @@ class FRDCDataset:
         # Sort the bands by the order in Band.FILE_NAMES
         return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
-    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Iterable[int]], Iterable[str]]:
+    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Rect], Iterable[str]]:
         """ Gets the bounds and labels from the bounds.csv file.
 
         Notes:
