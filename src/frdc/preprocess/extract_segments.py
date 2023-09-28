@@ -85,7 +85,7 @@ def extract_segments_from_bounds(
     """
     ar_segments = []
     for b in bounds:
-        x0, y0, x1, y1 = b.x0, b.x1, b.y0, b.y1
+        x0, y0, x1, y1 = b.x0, b.y0, b.x1, b.y1
         if cropped:
             ar_segments.append(ar[y0:y1, x0:x1])
         else:
