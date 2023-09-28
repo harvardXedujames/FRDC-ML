@@ -10,12 +10,12 @@ from frdc.conf import Band
 
 def compute_labels(
         ar: np.ndarray,
-        nir_threshold_value=0.5,
-        min_crown_size=100,
-        min_crown_hole=100,
-        connectivity=1,
-        peaks_footprint=20,
-        watershed_compactness=0.1
+        nir_threshold_value=90 / 256,
+        min_crown_size=1000,
+        min_crown_hole=1000,
+        connectivity=2,
+        peaks_footprint=200,
+        watershed_compactness=0
 ) -> np.ndarray:
     """ Automatically segments crowns from an NDArray with a series of image processing operations.
 
@@ -33,8 +33,8 @@ def compute_labels(
         Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
         Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
     """
-    # ar = scale_0_1_per_band(ar)
-    ar = scale_static_per_band(ar)
+    ar = scale_0_1_per_band(ar)
+    # ar = scale_static_per_band(ar)
     ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size, connectivity=connectivity)
     ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole, connectivity=connectivity)
@@ -123,4 +123,5 @@ def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compac
                      markers=ar_watershed_basins,
                      mask=ar_mask,
                      # watershed_line=True, # Enable this to see the watershed lines
-                     compactness=watershed_compactness)
+                     # compactness=watershed_compactness
+                     )
