@@ -3,6 +3,35 @@ from typing import Iterable
 import numpy as np
 
 
+
+def remove_small_segments_from_labels(
+        ar_labels: np.ndarray,
+        min_height: int = 10,
+        min_width: int = 10
+) -> np.ndarray:
+    """ Removes small segments from a label image.
+
+    Args:
+        ar_labels: Labelled Image, where each integer value is a segment mask.
+        min_height: Minimum height of a segment to be considered "small".
+        min_width: Minimum width of a segment to be considered "small".
+
+    Returns:
+        A labelled image with small segments removed.
+    """
+    ar_labels = ar_labels.copy()
+    for i in np.unique(ar_labels):
+        coords = np.argwhere(ar_labels == i)
+        y0, x0 = coords.min(axis=0)
+        y1, x1 = coords.max(axis=0) + 1
+        height = y1 - y0
+        width = x1 - x0
+        if height < min_height or width < min_width:
+            logging.info(f"Removing segment {i} with shape {height}x{width}")
+            ar_labels[ar_labels == i] = 0
+    return ar_labels
+
+
 def extract_segments_from_labels(
         ar: np.ndarray,
         ar_labels: np.ndarray,
