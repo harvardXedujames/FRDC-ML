@@ -1,4 +1,6 @@
-from .extract_segments import extract_segments_from_labels, extract_segments_from_bounds
+from .extract_segments import (extract_segments_from_labels, extract_segments_from_bounds,
+                               remove_small_segments_from_labels)
 from .preprocess import compute_labels
 
-__all__ = ['compute_labels', 'extract_segments_from_labels', 'extract_segments_from_bounds']
+__all__ = ['compute_labels', 'extract_segments_from_labels', 'extract_segments_from_bounds',
+           'remove_small_segments_from_labels']
