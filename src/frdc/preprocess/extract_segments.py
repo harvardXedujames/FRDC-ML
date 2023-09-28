@@ -1,3 +1,4 @@
+import logging
 from typing import Iterable
 
 import numpy as np
@@ -50,16 +51,18 @@ def extract_segments_from_labels(
 
     """
     ar_segments = []
-    for segment_ix in range(np.max(ar_labels) + 1):
-        ar_segment_mask = np.array(ar_labels == segment_ix)
+    for segment_ix in np.unique(ar_labels):
         if cropped:
-            coords = np.argwhere(ar_segment_mask)
+            coords = np.argwhere(ar_labels == segment_ix)
             x0, y0 = coords.min(axis=0)
             x1, y1 = coords.max(axis=0) + 1
-            ar_segments.append(ar[x0:x1, y0:y1])
+            ar_segment_cropped_mask = ar_labels[x0:x1, y0:y1] == segment_ix
+            ar_segment_cropped = ar[x0:x1, y0:y1]
+            ar_segment_cropped = np.where(ar_segment_cropped_mask[..., None], ar_segment_cropped, np.nan)
+            ar_segments.append(ar_segment_cropped)
         else:
-            ar_segment = ar.copy()
-            ar_segment = np.where(ar_segment_mask[..., None], ar_segment, np.nan)
+            ar_segment_mask = np.array(ar_labels == segment_ix)
+            ar_segment = np.where(ar_segment_mask[..., None], ar, np.nan)
             ar_segments.append(ar_segment)
     return ar_segments
 
