@@ -101,25 +101,25 @@ def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compac
     #   Image Depth: The distance from the background
     #   Image Basins: The local maxima of the image depth. i.e. points that are the deepest in the image.
 
-    # We can get the image depth by taking the negative euclidean distance transform of the binary mask.
-    # This means that lower values are further away from the background.
-    ar_watershed_depth = -distance_transform_edt(ar_mask)
+    # The ar distance is the distance from the background.
+    ar_distance = distance_transform_edt(ar_mask)
 
     # For basins, we find the basins, by finding the local maxima of the negative image depth.
     ar_watershed_basin_coords = peak_local_max(
-        -ar_watershed_depth,
+        ar_distance,
         footprint=np.ones((peaks_footprint, peaks_footprint)),
-        min_distance=1,
+        # min_distance=1,
         exclude_border=0,
-        p_norm=2
+        # p_norm=2,
+        labels=ar_mask
     )
-    ar_watershed_basins = np.zeros(ar_watershed_depth.shape, dtype=bool)
+    ar_watershed_basins = np.zeros(ar_distance.shape, dtype=bool)
     ar_watershed_basins[tuple(ar_watershed_basin_coords.T)] = True
     ar_watershed_basins, _ = ndimage.label(ar_watershed_basins)
 
     # TODO: I noticed that low watershed compactness values produces miniblobs, which can be indicative of redundant
     #  crowns. We should investigate this further.
-    return watershed(image=-ar_watershed_depth,
+    return watershed(image=-ar_distance,  # We use the negative so that "peaks" become "troughs"
                      markers=ar_watershed_basins,
                      mask=ar_mask,
                      # watershed_line=True, # Enable this to see the watershed lines
