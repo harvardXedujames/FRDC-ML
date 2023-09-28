@@ -2,6 +2,7 @@ from typing import Iterable
 
 import numpy as np
 
+from frdc.utils.utils import Rect
 
 
 def remove_small_segments_from_labels(
@@ -65,7 +66,7 @@ def extract_segments_from_labels(
 
 def extract_segments_from_bounds(
         ar: np.ndarray,
-        bounds: Iterable[Iterable[int]],
+        bounds: Iterable[Rect],
         cropped: bool = True
 ) -> list[np.ndarray]:
     """ Extracts segments as a list from bounds
