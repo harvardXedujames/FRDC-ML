@@ -10,10 +10,12 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 from PIL import Image
+from google.api_core.page_iterator import HTTPIterator
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
-from frdc.conf import LOCAL_DATASET_ROOT_DIR, SECRETS_DIR, GCS_PROJECT_ID, GCS_BUCKET_NAME, Band
+from frdc.conf import LOCAL_DATASET_ROOT_DIR, GCS_PROJECT_ID, \
+    GCS_BUCKET_NAME, Band
 from frdc.utils.utils import Rect
 
 
@@ -39,13 +41,13 @@ class FRDCDownloader:
 
         Args:
             anchor: The anchor file to find the dataset.
-                    This is used to find the dataset. For example, if we want to find the dataset for
-                    "chestnut_nature_park/20201218/183deg/result_Red.tif", then we can use "result_Red.tif" as the
-                    anchor file.
+                    This is used to find the dataset. For example, if we want
+                    to find the dataset for
+                    "chestnut_nature_park/20201218/183deg/result_Red.tif",
+                    then we can use "result_Red.tif" as the anchor file.
 
         Returns:
-            A DataFrame of all blobs in the bucket, with columns site, date, version.
-
+            An iterator of all blobs that match the anchor file.
         """
 
         # The anchor file to find the dataset
@@ -53,7 +55,8 @@ class FRDCDownloader:
         df = (
             # The list of all blobs in the bucket that contains the anchor file
             # E.g. "chestnut_nature_park/20201218/183deg/result_Red.tif"
-            pd.Series([blob.name for blob in self.bucket.list_blobs(match_glob=f"**/{anchor}")])
+            pd.Series([blob.name for blob in
+                       self.bucket.list_blobs(match_glob=f"**/{anchor}")])
             # Remove the anchor file name
             # E.g. "chestnut_nature_park/20201218/183deg"
             .str.replace(f"/{anchor}", "")
@@ -63,22 +66,28 @@ class FRDCDownloader:
 
         return df
 
-    def download_file(self, *, path: Path | str, local_exists_ok: bool = True) -> Path:
-        """ Downloads a file from Google Cloud Storage. If the file already exists locally, and the hashes match, it
-        will not download the file.
+    def download_file(self, *, path: Path | str,
+                      local_exists_ok: bool = True) -> Path:
+        """ Downloads a file from Google Cloud Storage. If the file already
+            exists locally, and the hashes match, it will not download the file
 
         Args:
             path: Path to the file in GCS.
-            local_exists_ok: If True, will not raise an error if the file already exists locally and the hashes match.
+            local_exists_ok: If True, will not raise an error if the file
+                already exists locally and the hashes match.
 
         Examples:
-            If our file in GCS is in gs://frdc-scan/casuarina/20220418/183deg/result_Blue.tif
+            If our file in GCS is in
+            gs://frdc-scan/casuarina/20220418/183deg/result_Blue.tif
             then we can download it with:
-            >>> download_file(path=Path("casuarina/20220418/183deg/result_Blue.tif"))
+            >>> download_file(
+            >>>     path=Path("casuarina/20220418/183deg/result_Blue.tif")
+            >>> )
 
         Raises:
             FileNotFoundError: If the file does not exist in GCS.
-            FileExistsError: If the file already exists locally and the hashes match.
+            FileExistsError: If the file already exists locally and the hashes
+                match.
 
         Returns:
             The local path to the downloaded file.
@@ -102,7 +111,8 @@ class FRDCDownloader:
                     # If local_exists_ok, then don't raise
                     return local_path
                 else:
-                    raise FileExistsError(f"{local_path} already exists and hashes match.")
+                    raise FileExistsError(
+                        f"{local_path} already exists and hashes match.")
 
         # Else, download
         logging.info(f"Downloading {gcs_blob.name} to {local_path}...")
@@ -123,13 +133,17 @@ class FRDCDataset:
         """ Loads a debug dataset from Google Cloud Storage.
 
         Returns:
-            A dictionary of the dataset, with keys as the filenames and values as the images.
+            A dictionary of the dataset, with keys as the filenames and values
+            as the images.
         """
         return FRDCDataset(site='DEBUG', date='0', version=None)
 
     @property
     def dataset_dir(self):
-        return Path(f"{self.site}/{self.date}/{self.version + '/' if self.version else ''}")
+        return Path(
+            f"{self.site}/{self.date}/"
+            f"{self.version + '/' if self.version else ''}"
+        )
 
     def get_ar_bands(self, band_names=Band.FILE_NAMES) -> np.ndarray:
         bands_dict = {}
@@ -139,31 +153,37 @@ class FRDCDataset:
             bands_dict[band_name] = ar_im
 
         # Sort the bands by the order in Band.FILE_NAMES
-        return np.stack([bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
+        return np.stack(
+            [bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
 
-    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Rect], Iterable[str]]:
+    def get_bounds_and_labels(self, file_name='bounds.csv') -> (
+            tuple)[Iterable[Rect], Iterable[str]]:
         """ Gets the bounds and labels from the bounds.csv file.
 
         Notes:
-            In the context of np.ndarray, to slice with x, y coordinates, you need to slice
-            with [y0:y1, x0:x1]. Which is different from the bounds.csv file.
+            In the context of np.ndarray, to slice with x, y coordinates,
+            you need to slice with [y0:y1, x0:x1]. Which is different from the
+            bounds.csv file.
 
         Args:
             file_name: The name of the bounds.csv file.
 
         Returns:
-            A tuple of (bounds, labels), where bounds is a list of (x0, y0, x1, y1) and labels is a list of labels.
+            A tuple of (bounds, labels), where bounds is a list of
+            (x0, y0, x1, y1) and labels is a list of labels.
         """
         fp = self.dl.download_file(path=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
-        return [Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()], df['name'].tolist()
+        return ([Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
+                df['name'].tolist())
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
         """ Loads an Image from a path.
 
         Args:
-            path: Path to image. pathlib.Path is preferred, but str is also accepted.
+            path: Path to image. pathlib.Path is preferred, but str is also
+                accepted.
 
         Returns:
             Image as numpy array.
