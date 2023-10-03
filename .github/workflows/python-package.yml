@@ -26,10 +26,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Initialize GCS credentials
-        run: |
-          mkdir -p ./.secrets
-          echo '${{ secrets.FRDC_DOWNLOAD_KEY }}' > ./.secrets/frmodel-key.json
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: frmodel
+          service_account_key: ${{ secrets.FRDC_DOWNLOAD_KEY }}
+          export_default_credentials: true
 
       - name: Install dependencies
         run: |
