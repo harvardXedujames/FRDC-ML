@@ -6,14 +6,16 @@ from sklearn.ensemble import RandomForestClassifier
 
 
 # We force keyword arguments to make it easier to read the function signature.
-def dummy_train(*,
-                X_train: np.ndarray, y_train: np.ndarray,
-                X_val: np.ndarray, y_val: np.ndarray
-                ) -> tuple[Callable[[np.ndarray], np.ndarray], ClassifierMixin, float]:
+def dummy_train(
+        *,
+        X_train: np.ndarray, y_train: np.ndarray,
+        X_val: np.ndarray, y_val: np.ndarray
+) -> tuple[Callable[[np.ndarray], np.ndarray], ClassifierMixin, float]:
     """ Dummy Training function.
 
     Notes:
-        This is obviously not final. This is just a placeholder to get the pipeline working.
+        This is obviously not final. This is just a placeholder to get the
+        pipeline working.
 
     Args:
         X_train: X_train is the train image numpy array of shape (N, H, W, C).
@@ -22,11 +24,12 @@ def dummy_train(*,
         y_val: y_val is the validation for y_train
 
     Returns:
-        The feature extraction function, the classifier, and the validation score.
+        The feature extraction function, the classifier, and validation score.
 
     """
 
-    # TODO: Placeholder feature extraction for an image. We'll probably sub with a CNN later.
+    # TODO: Placeholder feature extraction for an image.
+    #  We'll probably sub with a CNN later.
     def feature_extraction(X):
         return np.stack(
             [

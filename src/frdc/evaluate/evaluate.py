@@ -12,7 +12,8 @@ def dummy_evaluate(
     """ Dummy Evaluation function.
 
     Notes:
-        This is obviously not final. This is just a placeholder to get the pipeline working.
+        This is obviously not final. This is just a placeholder to get the
+         pipeline working.
 
     Args:
         feature_extraction: The feature extraction function.

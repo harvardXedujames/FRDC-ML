@@ -58,7 +58,8 @@ def extract_segments_from_labels(
             x1, y1 = coords.max(axis=0) + 1
             ar_segment_cropped_mask = ar_labels[x0:x1, y0:y1] == segment_ix
             ar_segment_cropped = ar[x0:x1, y0:y1]
-            ar_segment_cropped = np.where(ar_segment_cropped_mask[..., None], ar_segment_cropped, np.nan)
+            ar_segment_cropped = np.where(ar_segment_cropped_mask[..., None],
+                                          ar_segment_cropped, np.nan)
             ar_segments.append(ar_segment_cropped)
         else:
             ar_segment_mask = np.array(ar_labels == segment_ix)

@@ -51,7 +51,8 @@ def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
     ar_bands = []
     for band in range(ar.shape[-1]):
         ar_band = ar[:, :, band]
-        ar_band = (ar_band - np.nanmin(ar_band)) / (np.nanmax(ar_band) - np.nanmin(ar_band))
+        ar_band = ((ar_band - np.nanmin(ar_band)) /
+                   (np.nanmax(ar_band) - np.nanmin(ar_band)))
         ar_bands.append(ar_band)
 
     return np.stack(ar_bands, axis=-1)
@@ -69,19 +70,23 @@ def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
     return ar
 
 
-def threshold_binary_mask(ar: np.ndarray, band: Band, threshold_value: float) -> np.ndarray:
+def threshold_binary_mask(ar: np.ndarray, band: Band,
+                          threshold_value: float) -> np.ndarray:
     """ Creates a binary mask array from an NDArray by thresholding a band.
 
     Notes:
-         For the band argument, use Band.NIR for the NIR band, Band.RED for the RED band, etc.
+         For the band argument, use Band.NIR for the NIR band,
+         Band.RED for the RED band, etc.
 
     Returns:
-        A binary mask array of shape (H, W), True for values above the threshold, False otherwise.
+        A binary mask array of shape (H, W).
+        True for values above the threshold, False otherwise.
     """
     return ar[:, :, band] > threshold_value
 
 
-def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compactness: float) -> np.ndarray:
+def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int,
+                     watershed_compactness: float) -> np.ndarray:
     """ Watershed segmentation of a binary mask.
     
     Notes:
@@ -99,12 +104,13 @@ def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compac
     # Watershed
     # For watershed, we need:
     #   Image Depth: The distance from the background
-    #   Image Basins: The local maxima of the image depth. i.e. points that are the deepest in the image.
+    #   Image Basins: The local maxima of the image depth.
+    #                 i.e. points that are the deepest in the image.
 
     # The ar distance is the distance from the background.
     ar_distance = distance_transform_edt(ar_mask)
 
-    # For basins, we find the basins, by finding the local maxima of the negative image depth.
+    # We find the basins by the local maxima of the negative image depth.
     ar_watershed_basin_coords = peak_local_max(
         ar_distance,
         footprint=np.ones((peaks_footprint, peaks_footprint)),
@@ -117,11 +123,14 @@ def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int, watershed_compac
     ar_watershed_basins[tuple(ar_watershed_basin_coords.T)] = True
     ar_watershed_basins, _ = ndimage.label(ar_watershed_basins)
 
-    # TODO: I noticed that low watershed compactness values produces miniblobs, which can be indicative of redundant
-    #  crowns. We should investigate this further.
-    return watershed(image=-ar_distance,  # We use the negative so that "peaks" become "troughs"
+    # TODO: I noticed that low watershed compactness values produces miniblobs,
+    #  which can be indicative of redundant crowns.
+    #  We should investigate this further.
+    return watershed(image=-ar_distance,
+                     # We use the negative so that "peaks" become "troughs"
                      markers=ar_watershed_basins,
                      mask=ar_mask,
-                     # watershed_line=True, # Enable this to see the watershed lines
-                     # compactness=watershed_compactness
+                     # Enable this to see the watershed lines
+                     # watershed_line=True,
+                     compactness=watershed_compactness
                      )
