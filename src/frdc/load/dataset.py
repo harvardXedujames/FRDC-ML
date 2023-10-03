@@ -10,7 +10,6 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 from PIL import Image
-from google.api_core.page_iterator import HTTPIterator
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
