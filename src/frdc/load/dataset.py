@@ -26,14 +26,12 @@ class FRDCDownloader:
     bucket: storage.Bucket = field(init=False)
 
     def __post_init__(self):
-        # We pull the credentials here instead of the constructor for try-except block to catch the FileNotFoundError
-        if self.credentials is None:
-            try:
-                self.credentials = Credentials.from_service_account_file(next(SECRETS_DIR.glob("*.json")).as_posix())
-            except StopIteration:
-                raise FileNotFoundError(f"No credentials found in {SECRETS_DIR.as_posix()}")
-
-        client = storage.Client(project=self.project_id, credentials=self.credentials)
+        """ Initializes the GCS bucket. """
+        # If credentials is None, then use the default credentials.
+        # Default credentials are set by the environment variable
+        # GOOGLE_APPLICATION_CREDENTIALS, see ADC documentation:
+        client = storage.Client(project=self.project_id,
+                                credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
     def list_gcs_datasets(self, anchor=Band.FILE_NAMES[0]) -> pd.DataFrame:

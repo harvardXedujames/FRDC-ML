@@ -26,10 +26,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Initialize GCS credentials
-        run: |
-          mkdir -p ./.secrets
-          echo '${{ secrets.FRDC_DOWNLOAD_KEY }}' > ./.secrets/frmodel-key.json
+      - name: Set up gcloud
+        id: 'auth'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.FRDC_DOWNLOAD_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
 
       - name: Install dependencies
         run: |
@@ -46,5 +50,7 @@ jobs:
           flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
+#        env:
+#          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           pytest
