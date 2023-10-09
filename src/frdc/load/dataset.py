@@ -15,7 +15,7 @@ from google.oauth2.service_account import Credentials
 
 from frdc.conf import LOCAL_DATASET_ROOT_DIR, GCS_PROJECT_ID, \
     GCS_BUCKET_NAME, Band
-from frdc.utils.utils import Rect
+from frdc.utils import Rect
 
 
 @dataclass
@@ -35,7 +35,7 @@ class FRDCDownloader:
                                 credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
-    def list_gcs_datasets(self, anchor=Band.FILE_NAMES[0]) -> pd.DataFrame:
+    def list_gcs_datasets(self, anchor=Band.FILE_NAME_GLOBS[0]) -> pd.DataFrame:
         """ Lists all datasets from Google Cloud Storage.
 
         Args:
@@ -65,13 +65,13 @@ class FRDCDownloader:
 
         return df
 
-    def download_file(self, *, path: Path | str,
+    def download_file(self, *, path_glob: Path | str,
                       local_exists_ok: bool = True) -> Path:
         """ Downloads a file from Google Cloud Storage. If the file already
             exists locally, and the hashes match, it will not download the file
 
         Args:
-            path: Path to the file in GCS.
+            path_glob: Path Glob to the file in GCS. This must only match one file.
             local_exists_ok: If True, will not raise an error if the file
                 already exists locally and the hashes match.
 
@@ -79,11 +79,12 @@ class FRDCDownloader:
             If our file in GCS is in
             gs://frdc-scan/casuarina/20220418/183deg/result_Blue.tif
             then we can download it with:
-            >>> download_file(
-            >>>     path=Path("casuarina/20220418/183deg/result_Blue.tif")
-            >>> )
+            # >>> download_file(
+            # >>>     path=Path("casuarina/20220418/183deg/result_Blue.tif")
+            # >>> )
 
         Raises:
+            ValueError: If there are multiple blobs that match the path_glob.
             FileNotFoundError: If the file does not exist in GCS.
             FileExistsError: If the file already exists locally and the hashes
                 match.
@@ -91,13 +92,18 @@ class FRDCDownloader:
         Returns:
             The local path to the downloaded file.
         """
-        local_path = self.local_dataset_root_dir / path
-        gcs_path = path.as_posix() if isinstance(path, Path) else path
-        gcs_blob = self.bucket.blob(gcs_path)
 
-        # If not exists in GCS, raise error
-        if not gcs_blob.exists():
-            raise FileNotFoundError(f"{gcs_path} does not exist in GCS.")
+        # Check if there are multiple blobs that match the path_glob
+        gcs_blobs = list(self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
+
+        if len(gcs_blobs) > 1:
+            raise ValueError(f"Multiple blobs found for {path_glob}: {gcs_blobs}")
+        elif len(gcs_blobs) == 0:
+            raise FileNotFoundError(f"No blobs found for {path_glob}")
+
+        # Get the local path and the GCS blob
+        gcs_blob = gcs_blobs[0]
+        local_path = self.local_dataset_root_dir / gcs_blob.name
 
         # If locally exists & hashes match, return False
         if local_path.exists():
@@ -144,16 +150,20 @@ class FRDCDataset:
             f"{self.version + '/' if self.version else ''}"
         )
 
-    def get_ar_bands(self, band_names=Band.FILE_NAMES) -> np.ndarray:
+    def get_ar_bands(self, band_globs=Band.FILE_NAME_GLOBS) -> np.ndarray:
         bands_dict = {}
-        for band_name in band_names:
-            fp = self.dl.download_file(path=self.dataset_dir / band_name)
+        for band_glob in band_globs:
+            fp = self.dl.download_file(path_glob=self.dataset_dir / band_glob)
             ar_im = self._load_image(fp)
-            bands_dict[band_name] = ar_im
+
+            bands_dict[band_glob] = (
+                np.expand_dims(ar_im, axis=-1) if ar_im.ndim == 2 else ar_im
+            )
 
         # Sort the bands by the order in Band.FILE_NAMES
-        return np.stack(
-            [bands_dict[band_name] for band_name in Band.FILE_NAMES], axis=-1)
+        return np.concatenate(
+            [bands_dict[band_name] for band_name in Band.FILE_NAME_GLOBS], axis=-1
+        )
 
     def get_bounds_and_labels(self, file_name='bounds.csv') -> (
             tuple)[Iterable[Rect], Iterable[str]]:
@@ -171,7 +181,7 @@ class FRDCDataset:
             A tuple of (bounds, labels), where bounds is a list of
             (x0, y0, x1, y1) and labels is a list of labels.
         """
-        fp = self.dl.download_file(path=self.dataset_dir / file_name)
+        fp = self.dl.download_file(path_glob=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
         return ([Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
                 df['name'].tolist())

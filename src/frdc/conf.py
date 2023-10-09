@@ -10,13 +10,17 @@ GCS_BUCKET_NAME = 'frdc-scan'
 # These are sorted by wavelength
 # TODO: Is this a bit ugly? I'm not sure if there's a better way to do this.
 class Band:
-    BLUE = 0
-    GREEN = 1
-    RED = 2
-    RED_EDGE = 3
-    NIR = 4
+    WIDE_BLUE = 0
+    WIDE_GREEN = 1
+    WIDE_RED = 2
+    BLUE = 3
+    GREEN = 4
+    RED = 5
+    RED_EDGE = 6
+    NIR = 7
 
-    FILE_NAMES = (
+    FILE_NAME_GLOBS = (
+        '*result.tif',
         'result_Blue.tif',
         'result_Green.tif',
         'result_Red.tif',
@@ -24,6 +28,9 @@ class Band:
         'result_NIR.tif'
     )
 
+    WIDE_BLUE_MAX = 2 ** 16
+    WIDE_GREEN_MAX = 2 ** 16
+    WIDE_RED_MAX = 2 ** 16
     BLUE_MAX = 2 ** 14
     GREEN_MAX = 2 ** 14
     RED_MAX = 2 ** 14
