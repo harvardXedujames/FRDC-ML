@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -182,7 +183,13 @@ class FRDCDataset:
         d = {}
         fp_cache = {}
 
-        config = {k: v for k, v in BAND_CONFIG.items() if k in bands}
+        try:
+            config = OrderedDict({k: BAND_CONFIG[k] for k in bands})
+        except KeyError:
+            raise KeyError(
+                f"Invalid band name. Valid band names are {BAND_CONFIG.keys()}"
+            )
+
         for name, (glob, transform) in config.items():
             fp = self.dl.download_file(path_glob=self.dataset_dir / glob)
 
