@@ -5,7 +5,7 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Callable
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
 from frdc.conf import LOCAL_DATASET_ROOT_DIR, GCS_PROJECT_ID, \
-    GCS_BUCKET_NAME, DEFAULT_BAND_CONFIG
+    GCS_BUCKET_NAME, BAND_CONFIG
 from frdc.utils import Rect
 
 
@@ -94,10 +94,12 @@ class FRDCDownloader:
         """
 
         # Check if there are multiple blobs that match the path_glob
-        gcs_blobs = list(self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
+        gcs_blobs = list(
+            self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
 
         if len(gcs_blobs) > 1:
-            raise ValueError(f"Multiple blobs found for {path_glob}: {gcs_blobs}")
+            raise ValueError(
+                f"Multiple blobs found for {path_glob}: {gcs_blobs}")
         elif len(gcs_blobs) == 0:
             raise FileNotFoundError(f"No blobs found for {path_glob}")
 
@@ -150,32 +152,38 @@ class FRDCDataset:
             f"{self.version + '/' if self.version else ''}"
         )
 
-    def get_bands(
-            self,
-            bands: dict[str, tuple[str, Callable[[np.ndarray], np.ndarray]]] =
-            DEFAULT_BAND_CONFIG
-    ) -> dict[str, np.ndarray]:
-        """ Gets the bands from the dataset.
+    def get_ar_bands_as_dict(self, bands: Iterable[str] = BAND_CONFIG.keys()
+                             ) -> dict[str, np.ndarray]:
+        """ Gets the bands from the dataset as a dictionary of (name, image)
 
         Notes:
-            The bands are returned as a dictionary of (name, image) pairs.
-            For more information on the bands, see the frdc.conf.DEFAULT_BAND_CONFIG
-            variable.
-
-            You can retrieve the scaled bands with the
-
+            Use get_ar_bands to get the bands as a concatenated numpy array.
+            This is used to preserve the bands separately as keys and values.
 
         Args:
-            bands: A dictionary config of the bands to get. The keys are the
-                names of the bands, and the values are a tuple of (glob,
-                transform). Glob is the glob to match the file, and transform
-                is a function that takes the image array and returns a transformed
-                image array.
+            bands: The bands to get, as a list of band names.
+                See BAND_CONFIG for the list of band names.
 
+        Examples:
+            # >>> get_bands({
+            # >>>     'WR': ('*result.tif', lambda x: x[..., 0:1]),
+            # >>>     'WG': ('*result.tif', lambda x: x[..., 1:2]),
+            # >>>     ...
+            # >>> })
+
+            This example will return {'WR': np.ndarray, 'WG': np.ndarray, ...}
+            where np.ndarray is the image array.
+
+            The transform function above is used to slice the image array.
+
+        Returns:
+            A dictionary of (KeyName, image) pairs.
         """
         d = {}
         fp_cache = {}
-        for name, (glob, transform) in bands.items():
+
+        config = {k: v for k, v in BAND_CONFIG.items() if k in bands}
+        for name, (glob, transform) in config.items():
             fp = self.dl.download_file(path_glob=self.dataset_dir / glob)
 
             # We may use the same file multiple times, so we cache it
@@ -191,7 +199,26 @@ class FRDCDataset:
 
         return d
 
-    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Rect], Iterable[str]]:
+    def get_ar_bands(self, bands: Iterable[str] = BAND_CONFIG.keys(),
+                     ) -> tuple[np.ndarray, list[str]]:
+        """ Gets the bands as a numpy array, and the band order as a list.
+
+        Notes:
+            This is a wrapper around get_bands, which concatenates the bands.
+
+        Args:
+            bands: The bands to get, as a list of band names.
+
+        Returns:
+            A tuple of (ar, band_order), where ar is a numpy array of shape
+            (H, W, C) and band_order is a list of band names.
+        """
+
+        d: dict[str, np.ndarray] = self.get_ar_bands_as_dict(bands)
+        return np.concatenate(list(d.values()), axis=-1), list(d.keys())
+
+    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[
+        Iterable[Rect], Iterable[str]]:
         """ Gets the bounds and labels from the bounds.csv file.
 
         Notes:
@@ -229,11 +256,3 @@ class FRDCDataset:
         im = Image.open(Path(path).as_posix())
         ar = np.array(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
-
-
-logging.basicConfig(level=logging.DEBUG)
-ds = FRDCDataset('chestnut_nature_park', '20201218', None)
-# %%
-ar = ds.get_bands()
-# %%
-# set logging level to print debug

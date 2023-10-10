@@ -6,21 +6,23 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
 from frdc.evaluate import dummy_evaluate
-from frdc.preprocess import compute_labels, extract_segments_from_labels, extract_segments_from_bounds
+from frdc.preprocess import extract_segments_from_labels, \
+    extract_segments_from_bounds
 from frdc.train import dummy_train
+from utils import get_labels
 
 
 def test_auto_segmentation_pipeline(ds):
     """ Tests the use case where we just want to automatically segment the image. """
 
-    ar = ds.get_bands()
-    ar_labels = compute_labels(ar)
+    ar, order = ds.get_ar_bands()
+    ar_labels = get_labels(ar, order)
     ar_segments = extract_segments_from_labels(ar, ar_labels)
 
 
 def test_manual_segmentation_pipeline(ds):
     """ Test the use case where we manually segment the image, then train a model on it. """
-    ar = ds.get_bands()
+    ar, order = ds.get_ar_bands()
     ar = np.nan_to_num(ar)
     bounds, labels = ds.get_bounds_and_labels()
     segments = extract_segments_from_bounds(ar, bounds, cropped=False)
@@ -32,8 +34,12 @@ def test_manual_segmentation_pipeline(ds):
     X_train, X_val, X_test = X[:-6], X[-6:-3], X[-3:]
     y_train, y_val, y_test = y[:-6], y[-6:-3], y[-3:]
 
-    feature_extraction, classifier, val_score = dummy_train(X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)
-    test_score = dummy_evaluate(feature_extraction=feature_extraction, classifier=classifier,
+    feature_extraction, classifier, val_score = dummy_train(X_train=X_train,
+                                                            y_train=y_train,
+                                                            X_val=X_val,
+                                                            y_val=y_val)
+    test_score = dummy_evaluate(feature_extraction=feature_extraction,
+                                classifier=classifier,
                                 X_test=X_test, y_test=y_test)
 
     logging.debug(f"Validation score: {val_score:.2%}")
@@ -44,12 +50,13 @@ def test_manual_segmentation_pipeline(ds):
 
 def test_unlabelled_prediction(ds):
     """ Test the use case where we have unlabelled data, and we want to predict the labels. """
-    ar = ds.get_bands()
+    ar, order = ds.get_ar_bands()
     bounds, labels = ds.get_bounds_and_labels()
 
     # TODO: We need to revisit how "unlabelled" is defined.
     unlabelled_bounds = [b for b, l in zip(bounds, labels) if l == 'Tree 1']
-    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds, cropped=False)
+    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds,
+                                                       cropped=False)
     X = np.stack(unlabelled_segments)
     feature_extraction, classifier = test_manual_segmentation_pipeline(ds)
     X = feature_extraction(X)
@@ -68,12 +75,13 @@ def test_consistency_sampling(ds):
     6) Sample the most inconsistent segments
 
     """
-    ar = ds.get_bands()
+    ar, order = ds.get_ar_bands()
     bounds, labels = ds.get_bounds_and_labels()
 
     # TODO: We need to revisit how "unlabelled" is defined.
     unlabelled_bounds = [b for b, l in zip(bounds, labels) if l == 'Tree 1']
-    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds, cropped=False)
+    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds,
+                                                       cropped=False)
 
     X = np.stack(unlabelled_segments)
     feature_extraction, classifier = test_manual_segmentation_pipeline(ds)
@@ -82,7 +90,8 @@ def test_consistency_sampling(ds):
     # TODO: Add actual augmentations
     N_AUGMENTS = 10
     augments = [
-        lambda x: x[np.random.choice(range(X.shape[0]), X.shape[0], replace=False)]
+        lambda x: x[np.random.choice(range(X.shape[0]), X.shape[0],
+                                     replace=False)]
         for _ in range(N_AUGMENTS)
     ]
 

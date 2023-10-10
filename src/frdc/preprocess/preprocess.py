@@ -2,44 +2,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.ndimage import distance_transform_edt
 from skimage.feature import peak_local_max
-from skimage.morphology import remove_small_objects, remove_small_holes
 from skimage.segmentation import watershed
-
-from frdc.conf import Band
-
-
-def compute_labels(
-        ar: np.ndarray,
-        nir_threshold_value=90 / 256,
-        min_crown_size=1000,
-        min_crown_hole=1000,
-        connectivity=2,
-        peaks_footprint=200,
-        watershed_compactness=0
-) -> np.ndarray:
-    """ Automatically segments crowns from an NDArray with a series of image processing operations.
-
-    Args:
-        ar: NDArray of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
-        nir_threshold_value: Threshold value for the NIR band.
-        min_crown_size: Minimum crown size in pixels.
-        min_crown_hole: Minimum crown hole size in pixels.
-        connectivity: Connectivity for morphological operations.
-        peaks_footprint: Footprint for peak_local_max.
-        watershed_compactness: Compactness for watershed.
-
-    Returns:
-        A tuple of (background, crowns), background is the background image and crowns is a list of np.ndarray crowns.
-        Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
-        Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
-    """
-    ar = scale_0_1_per_band(ar)
-    # ar = scale_static_per_band(ar)
-    ar_mask = threshold_binary_mask(ar, Band.NIR, nir_threshold_value)
-    ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size, connectivity=connectivity)
-    ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole, connectivity=connectivity)
-    ar_labels = binary_watershed(ar_mask, peaks_footprint, watershed_compactness)
-    return ar_labels
 
 
 def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
@@ -58,20 +21,21 @@ def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
     return np.stack(ar_bands, axis=-1)
 
 
-def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
-    """ This scales statically, by their defined maximum   """
-    ar = ar.copy()
-    ar[:, :, Band.BLUE] /= Band.BLUE_MAX
-    ar[:, :, Band.GREEN] /= Band.GREEN_MAX
-    ar[:, :, Band.RED] /= Band.RED_MAX
-    ar[:, :, Band.RED_EDGE] /= Band.RED_EDGE_MAX
-    ar[:, :, Band.NIR] /= Band.NIR_MAX
+# def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
+#     """ This scales statically, by their defined maximum   """
+#     ar = ar.copy()
+#     ar[:, :, Band.BLUE] /= Band.BLUE_MAX
+#     ar[:, :, Band.GREEN] /= Band.GREEN_MAX
+#     ar[:, :, Band.RED] /= Band.RED_MAX
+#     ar[:, :, Band.RED_EDGE] /= Band.RED_EDGE_MAX
+#     ar[:, :, Band.NIR] /= Band.NIR_MAX
+#
+#     return ar
 
-    return ar
 
-
-def threshold_binary_mask(ar: np.ndarray, band: Band,
-                          threshold_value: float) -> np.ndarray:
+def threshold_binary_mask(ar: np.ndarray,
+                          band_ix: int,
+                          threshold_value: float = 90 / 256) -> np.ndarray:
     """ Creates a binary mask array from an NDArray by thresholding a band.
 
     Notes:
@@ -82,11 +46,12 @@ def threshold_binary_mask(ar: np.ndarray, band: Band,
         A binary mask array of shape (H, W).
         True for values above the threshold, False otherwise.
     """
-    return ar[:, :, band] > threshold_value
+    return ar[:, :, band_ix] > threshold_value
 
 
-def binary_watershed(ar_mask: np.ndarray, peaks_footprint: int,
-                     watershed_compactness: float) -> np.ndarray:
+def binary_watershed(ar_mask: np.ndarray,
+                     peaks_footprint: int = 200,
+                     watershed_compactness: float = 0) -> np.ndarray:
     """ Watershed segmentation of a binary mask.
     
     Notes:
