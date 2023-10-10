@@ -5,7 +5,7 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Callable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
 from frdc.conf import LOCAL_DATASET_ROOT_DIR, GCS_PROJECT_ID, \
-    GCS_BUCKET_NAME, Band
+    GCS_BUCKET_NAME, DEFAULT_BAND_CONFIG
 from frdc.utils import Rect
 
 
@@ -35,7 +35,7 @@ class FRDCDownloader:
                                 credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
-    def list_gcs_datasets(self, anchor=Band.FILE_NAME_GLOBS[0]) -> pd.DataFrame:
+    def list_gcs_datasets(self, anchor='result_Red.tif') -> pd.DataFrame:
         """ Lists all datasets from Google Cloud Storage.
 
         Args:
@@ -150,23 +150,48 @@ class FRDCDataset:
             f"{self.version + '/' if self.version else ''}"
         )
 
-    def get_ar_bands(self, band_globs=Band.FILE_NAME_GLOBS) -> np.ndarray:
-        bands_dict = {}
-        for band_glob in band_globs:
-            fp = self.dl.download_file(path_glob=self.dataset_dir / band_glob)
-            ar_im = self._load_image(fp)
+    def get_bands(
+            self,
+            bands: dict[str, tuple[str, Callable[[np.ndarray], np.ndarray]]] =
+            DEFAULT_BAND_CONFIG
+    ) -> dict[str, np.ndarray]:
+        """ Gets the bands from the dataset.
 
-            bands_dict[band_glob] = (
-                np.expand_dims(ar_im, axis=-1) if ar_im.ndim == 2 else ar_im
-            )
+        Notes:
+            The bands are returned as a dictionary of (name, image) pairs.
+            For more information on the bands, see the frdc.conf.DEFAULT_BAND_CONFIG
+            variable.
 
-        # Sort the bands by the order in Band.FILE_NAMES
-        return np.concatenate(
-            [bands_dict[band_name] for band_name in Band.FILE_NAME_GLOBS], axis=-1
-        )
+            You can retrieve the scaled bands with the
 
-    def get_bounds_and_labels(self, file_name='bounds.csv') -> (
-            tuple)[Iterable[Rect], Iterable[str]]:
+
+        Args:
+            bands: A dictionary config of the bands to get. The keys are the
+                names of the bands, and the values are a tuple of (glob,
+                transform). Glob is the glob to match the file, and transform
+                is a function that takes the image array and returns a transformed
+                image array.
+
+        """
+        d = {}
+        fp_cache = {}
+        for name, (glob, transform) in bands.items():
+            fp = self.dl.download_file(path_glob=self.dataset_dir / glob)
+
+            # We may use the same file multiple times, so we cache it
+            if fp in fp_cache:
+                logging.debug(f"Cache hit for {fp}, using cached image...")
+                im = fp_cache[fp]
+            else:
+                logging.debug(f"Cache miss for {fp}, loading...")
+                im = self._load_image(fp)
+                fp_cache[fp] = im
+
+            d[name] = transform(im)
+
+        return d
+
+    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[Iterable[Rect], Iterable[str]]:
         """ Gets the bounds and labels from the bounds.csv file.
 
         Notes:
@@ -188,15 +213,27 @@ class FRDCDataset:
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
-        """ Loads an Image from a path.
+        """ Loads an Image from a path into a 3D numpy array. (H, W, C)
+
+        Notes:
+            If the image has only 1 channel, then it will be (H, W, 1) instead
 
         Args:
             path: Path to image. pathlib.Path is preferred, but str is also
                 accepted.
 
         Returns:
-            Image as numpy array.
+            3D Image as numpy array.
         """
 
         im = Image.open(Path(path).as_posix())
-        return np.array(im)
+        ar = np.array(im)
+        return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
+
+
+logging.basicConfig(level=logging.DEBUG)
+ds = FRDCDataset('chestnut_nature_park', '20201218', None)
+# %%
+ar = ds.get_bands()
+# %%
+# set logging level to print debug

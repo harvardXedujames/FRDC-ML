@@ -13,14 +13,14 @@ from frdc.train import dummy_train
 def test_auto_segmentation_pipeline(ds):
     """ Tests the use case where we just want to automatically segment the image. """
 
-    ar = ds.get_ar_bands()
+    ar = ds.get_bands()
     ar_labels = compute_labels(ar)
     ar_segments = extract_segments_from_labels(ar, ar_labels)
 
 
 def test_manual_segmentation_pipeline(ds):
     """ Test the use case where we manually segment the image, then train a model on it. """
-    ar = ds.get_ar_bands()
+    ar = ds.get_bands()
     ar = np.nan_to_num(ar)
     bounds, labels = ds.get_bounds_and_labels()
     segments = extract_segments_from_bounds(ar, bounds, cropped=False)
@@ -44,7 +44,7 @@ def test_manual_segmentation_pipeline(ds):
 
 def test_unlabelled_prediction(ds):
     """ Test the use case where we have unlabelled data, and we want to predict the labels. """
-    ar = ds.get_ar_bands()
+    ar = ds.get_bands()
     bounds, labels = ds.get_bounds_and_labels()
 
     # TODO: We need to revisit how "unlabelled" is defined.
@@ -68,7 +68,7 @@ def test_consistency_sampling(ds):
     6) Sample the most inconsistent segments
 
     """
-    ar = ds.get_ar_bands()
+    ar = ds.get_bands()
     bounds, labels = ds.get_bounds_and_labels()
 
     # TODO: We need to revisit how "unlabelled" is defined.
