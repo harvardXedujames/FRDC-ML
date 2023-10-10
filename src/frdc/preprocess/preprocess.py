@@ -21,16 +21,28 @@ def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
     return np.stack(ar_bands, axis=-1)
 
 
-# def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
-#     """ This scales statically, by their defined maximum   """
-#     ar = ar.copy()
-#     ar[:, :, Band.BLUE] /= Band.BLUE_MAX
-#     ar[:, :, Band.GREEN] /= Band.GREEN_MAX
-#     ar[:, :, Band.RED] /= Band.RED_MAX
-#     ar[:, :, Band.RED_EDGE] /= Band.RED_EDGE_MAX
-#     ar[:, :, Band.NIR] /= Band.NIR_MAX
-#
-#     return ar
+def scale_static_per_band(
+        ar: np.ndarray,
+        order: list[str],
+        bounds_config: dict[str, tuple[int, int]] = BAND_MAX_CONFIG
+) -> np.ndarray:
+    """ This scales statically per band, using the bounds_config.
+
+    Args:
+        ar: NDArray of shape (H, W, C), where C is the number of bands.
+        order: The order of the bands.
+        bounds_config: The bounds config, see BAND_MAX_CONFIG for an example.
+
+    Returns:
+        The scaled array.
+    """
+    ar = ar.copy()
+
+    for e, band in enumerate(order):
+        ar_min, ar_max = bounds_config[band]
+        ar[..., e] = (ar[..., e] - ar_min) / (ar_max - ar_min)
+
+    return ar
 
 
 def threshold_binary_mask(ar: np.ndarray,
