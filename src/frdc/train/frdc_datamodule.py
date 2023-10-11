@@ -80,16 +80,3 @@ class FRDCDataModule(LightningDataModule):
                           shuffle=False)
 
 
-dm = FRDCDataModule(
-    ds=FRDCDataset._load_debug_dataset(),
-    ar_segment_transform=lambda x: torch.stack([
-        torch.from_numpy(resize(s, [299, 299])) for s in x
-    ]),
-    td_split=lambda x: random_split(x, lengths=[len(x) - 6, 3, 3]),
-    batch_size=3
-)
-dm.prepare_data()
-dm.setup()
-
-for i in dm.train_dataloader():
-    break
