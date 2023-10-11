@@ -8,11 +8,13 @@ INCEPTION_OUT_DIMS = 1524
 class FaceNet(nn.Module):
     def __init__(self, n_classes: int = 10):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 10, 3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3,
+                               padding=1)
         self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv2d(10, 7, 3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=10, out_channels=7, kernel_size=3,
+                               padding=1)
         self.relu2 = nn.ReLU()
-        self.conv3 = nn.Conv2d(7, 3, 1)
+        self.conv3 = nn.Conv2d(in_channels=7, out_channels=3, kernel_size=1)
         self.relu3 = nn.ReLU()
 
         self.base_model = inception_v3(
