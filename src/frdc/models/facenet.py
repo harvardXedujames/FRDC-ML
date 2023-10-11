@@ -4,7 +4,8 @@ from torchvision.models import Inception_V3_Weights, inception_v3
 
 
 class FaceNet(nn.Module):
-    INCEPTION_OUT_DIMS = 1524
+    INCEPTION_OUT_DIMS = 2048
+    INCEPTION_AUX_DIMS = 1000
     INCEPTION_IN_CHANNELS = 3
     MIN_SIZE = 299
 
@@ -36,26 +37,22 @@ class FaceNet(nn.Module):
                                kernel_size=1)
         self.relu3 = nn.ReLU()
 
-        self.base_model = inception_v3(
-            weights=Inception_V3_Weights.IMAGENET1K_V1
+        self.inception = inception_v3(
+            weights=Inception_V3_Weights.IMAGENET1K_V1,
         )
-        # We remove the last layer by replacing it with an identity layer
-        self.base_model.fc = nn.Identity()
+        self.inception.fc = nn.Identity()
 
         # Freeze base model
-        for param in self.base_model.parameters():
+        for param in self.inception.parameters():
             param.requires_grad = False
+
+        self.fc = nn.Linear(self.INCEPTION_OUT_DIMS, n_out_classes)
 
         self.feature_extraction = nn.Sequential(
             self.conv1, self.relu1,
             self.conv2, self.relu2,
             self.conv3, self.relu3,
-            self.base_model
         )
-
-        # Logits & aux_logits are the shape of (batch_size, INCEPTION_OUT_DIMS)
-        # Thus concat them to (batch_size, INCEPTION_OUT_DIMS * 2)
-        self.fc = nn.Linear(self.INCEPTION_OUT_DIMS * 2, n_out_classes)
 
     def forward(self, x: torch.Tensor):
         """ Forward pass.
@@ -78,6 +75,13 @@ class FaceNet(nn.Module):
                 f' - Batch size >= 2\n'
                 f' - Height >= {self.MIN_SIZE}\n'
             )
-        logits, aux_logits = self.feature_extraction(x)
-        x = torch.concat([logits, aux_logits], dim=1)
-        return self.fc(x)
+        x = self.feature_extraction(x)
+
+        # During training, the auxiliary outputs are used for auxiliary loss,
+        # but during testing, only the main output is used.
+        if self.training:
+            logits, *_ = self.inception(x)
+        else:
+            logits = self.inception(x)
+
+        return self.fc(logits)

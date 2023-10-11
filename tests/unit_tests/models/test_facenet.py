@@ -10,7 +10,7 @@ MIN_SIZE = FaceNet.MIN_SIZE
 
 
 @pytest.fixture(scope='module')
-def face_net():
+def facenet():
     return FaceNet(n_in_channels=N_CHANNELS, n_out_classes=N_CLASSES)
 
 
@@ -33,10 +33,17 @@ def face_net():
         [1, N_CHANNELS + 1, MIN_SIZE - 1, False],
     ]
 )
-def test_face_net_io(face_net, batch_size, channels, size, ok):
+def test_face_net_io(facenet, batch_size, channels, size, ok):
+    def check(net, x):
+        if ok:
+            assert net(x).shape == (BATCH_SIZE, N_CLASSES)
+        else:
+            with pytest.raises(RuntimeError):
+                net(x)
+
     x = torch.rand((batch_size, channels, size, size))
-    if ok:
-        assert face_net(x).shape == (BATCH_SIZE, N_CLASSES)
-    else:
-        with pytest.raises(RuntimeError):
-            face_net(x)
+
+    facenet.train()
+    check(facenet, x)
+    facenet.eval()
+    check(facenet, x)
