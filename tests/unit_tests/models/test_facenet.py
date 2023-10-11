@@ -33,7 +33,7 @@ def facenet():
         [1, N_CHANNELS + 1, MIN_SIZE - 1, False],
     ]
 )
-def test_face_net_io(facenet, batch_size, channels, size, ok):
+def test_facenet_io(facenet, batch_size, channels, size, ok):
     def check(net, x):
         if ok:
             assert net(x).shape == (BATCH_SIZE, N_CLASSES)
@@ -47,3 +47,11 @@ def test_face_net_io(facenet, batch_size, channels, size, ok):
     check(facenet, x)
     facenet.eval()
     check(facenet, x)
+
+
+def test_facenet_frozen(facenet):
+    """ Assert that the base model is frozen, and the rest is trainable. """
+    assert sum(p.numel() for p in facenet.parameters()
+               if p.requires_grad) > 0
+    assert sum(p.numel() for p in facenet.inception.parameters()
+               if p.requires_grad) == 0
