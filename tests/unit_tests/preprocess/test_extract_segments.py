@@ -15,9 +15,8 @@ Thus, our test is:
 """
 import numpy as np
 
-from frdc.preprocess import (extract_segments_from_bounds,
-                             extract_segments_from_labels, compute_labels,
-                             remove_small_segments_from_labels)
+from frdc.preprocess import *
+from utils import get_labels
 
 
 def test_remove_small_segments_from_labels():
@@ -63,29 +62,25 @@ def test_remove_small_segments_from_labels():
     test_unique_labels({0}, min_height=4, min_width=4)
 
 
-def test_extract_segments_from_bounds_cropped(ds):
+def test_extract_segments_from_bounds_cropped(ds, ar):
     bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds,
-                                            cropped=True)
+    segments = extract_segments_from_bounds(ar, bounds, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
-def test_extract_segments_from_bounds_no_crop(ds):
+def test_extract_segments_from_bounds_no_crop(ds, ar):
     bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds,
-                                            cropped=False)
+    segments = extract_segments_from_bounds(ar, bounds, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
 
 
-def test_extract_segments_from_labels_cropped(ds):
-    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
-    segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels,
-                                            cropped=True)
+def test_extract_segments_from_labels_cropped(ar, order):
+    ar_labels = get_labels(ar, order)
+    segments = extract_segments_from_labels(ar, ar_labels, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
-def test_extract_segments_from_labels_no_crop(ds):
-    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
-    segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels,
-                                            cropped=False)
+def test_extract_segments_from_labels_no_crop(ar, order):
+    ar_labels = get_labels(ar, order)
+    segments = extract_segments_from_labels(ar, ar_labels, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)

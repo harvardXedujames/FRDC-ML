@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parents[2]
@@ -6,26 +7,24 @@ SECRETS_DIR = ROOT_DIR / '.secrets'
 GCS_PROJECT_ID = 'frmodel'
 GCS_BUCKET_NAME = 'frdc-scan'
 
+BAND_CONFIG = OrderedDict({
+    'WB': ('*result.tif', lambda x: x[..., 2:3]),
+    'WG': ('*result.tif', lambda x: x[..., 1:2]),
+    'WR': ('*result.tif', lambda x: x[..., 0:1]),
+    'NB': ('result_Blue.tif', lambda x: x),
+    'NG': ('result_Green.tif', lambda x: x),
+    'NR': ('result_Red.tif', lambda x: x),
+    'RE': ('result_RedEdge.tif', lambda x: x),
+    'NIR': ('result_NIR.tif', lambda x: x),
+})
 
-# These are sorted by wavelength
-# TODO: Is this a bit ugly? I'm not sure if there's a better way to do this.
-class Band:
-    BLUE = 0
-    GREEN = 1
-    RED = 2
-    RED_EDGE = 3
-    NIR = 4
-
-    FILE_NAMES = (
-        'result_Blue.tif',
-        'result_Green.tif',
-        'result_Red.tif',
-        'result_RedEdge.tif',
-        'result_NIR.tif'
-    )
-
-    BLUE_MAX = 2 ** 14
-    GREEN_MAX = 2 ** 14
-    RED_MAX = 2 ** 14
-    RED_EDGE_MAX = 2 ** 14
-    NIR_MAX = 2 ** 14
+BAND_MAX_CONFIG: dict[str, tuple[int, int]] = {
+    'WR': (0, 2 ** 8),
+    'WG': (0, 2 ** 8),
+    'WB': (0, 2 ** 8),
+    'NR': (0, 2 ** 14),
+    'NG': (0, 2 ** 14),
+    'NB': (0, 2 ** 14),
+    'RE': (0, 2 ** 14),
+    'NIR': (0, 2 ** 14),
+}
