@@ -2,11 +2,22 @@ import torch
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
-INCEPTION_OUT_DIMS = 1524
-
 
 class FaceNet(nn.Module):
+    INCEPTION_OUT_DIMS = 1524
+    MIN_SIZE = 299
+    CHANNELS = 3
+
     def __init__(self, n_classes: int = 10):
+        """ Initialize the FaceNet model.
+
+        Notes:
+            - Min input size: 299 x 299.
+            - Channels: 3.
+            - Batch size: >= 2.
+
+            Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
+        """
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3,
                                padding=1)
@@ -36,9 +47,32 @@ class FaceNet(nn.Module):
 
         # Logits & aux_logits are the shape of (batch_size, INCEPTION_OUT_DIMS)
         # Thus concat them to (batch_size, INCEPTION_OUT_DIMS * 2)
-        self.fc = nn.Linear(INCEPTION_OUT_DIMS * 2, n_classes)
+        self.fc = nn.Linear(self.INCEPTION_OUT_DIMS * 2, n_classes)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
+        """ Forward pass.
+
+        Notes:
+            - Min input size: 299 x 299.
+            - Channels: 3.
+            - Batch size: >= 2.
+
+        Args:
+            x: Input tensor of shape (batch_size, channels, height, width).
+        """
+
+        if (
+                x.shape[0] < 2 or
+                x.shape[1] != self.CHANNELS or
+                x.shape[2] < self.MIN_SIZE or
+                x.shape[3] < self.MIN_SIZE
+        ):
+            raise ValueError(
+                f'Input shape {x.shape} must adhere to the following:\n'
+                f' - Batch size >= 2\n'
+                f' - Channels == {self.CHANNELS}\n'
+                f' - Height >= {self.MIN_SIZE}\n'
+            )
         logits, aux_logits = self.feature_extraction(x)
         x = torch.concat([logits, aux_logits], dim=1)
         return self.fc(x)
