@@ -34,7 +34,7 @@ class FaceNet(nn.Module):
             self.base_model
         )
 
-        # Logits and aux_logits are the shape of (batch_size, INCEPTION_OUT_DIMS)
+        # Logits & aux_logits are the shape of (batch_size, INCEPTION_OUT_DIMS)
         # Thus concat them to (batch_size, INCEPTION_OUT_DIMS * 2)
         self.fc = nn.Linear(INCEPTION_OUT_DIMS * 2, n_classes)
 
