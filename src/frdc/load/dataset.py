@@ -80,9 +80,10 @@ class FRDCDownloader:
             If our file in GCS is in
             gs://frdc-scan/casuarina/20220418/183deg/result_Blue.tif
             then we can download it with:
-            # >>> download_file(
-            # >>>     path=Path("casuarina/20220418/183deg/result_Blue.tif")
-            # >>> )
+
+            >>> download_file(
+            >>>     path=Path("casuarina/20220418/183deg/result_Blue.tif")
+            >>> )
 
         Raises:
             ValueError: If there are multiple blobs that match the path_glob.
@@ -162,20 +163,15 @@ class FRDCDataset:
             This is used to preserve the bands separately as keys and values.
 
         Args:
-            bands: The bands to get, as a list of band names.
-                See BAND_CONFIG for the list of band names.
+            bands: The bands to get, e.g. ['WB', 'WG', 'WR']. By default, this
+                get all bands in BAND_CONFIG.
 
         Examples:
-            # >>> get_bands({
-            # >>>     'WR': ('*result.tif', lambda x: x[..., 0:1]),
-            # >>>     'WG': ('*result.tif', lambda x: x[..., 1:2]),
-            # >>>     ...
-            # >>> })
+            >>> get_ar_bands_as_dict(['WB', 'WG', 'WR']])
 
-            This example will return {'WR': np.ndarray, 'WG': np.ndarray, ...}
-            where np.ndarray is the image array.
+            Returns
 
-            The transform function above is used to slice the image array.
+            >>> {'WB': np.ndarray, 'WG': np.ndarray, 'WR': np.ndarray}
 
         Returns:
             A dictionary of (KeyName, image) pairs.
@@ -211,10 +207,18 @@ class FRDCDataset:
         """ Gets the bands as a numpy array, and the band order as a list.
 
         Notes:
-            This is a wrapper around get_bands, which concatenates the bands.
+            This is a wrapper around get_bands, concatenating the bands.
 
         Args:
-            bands: The bands to get, as a list of band names.
+            bands: The bands to get, e.g. ['WB', 'WG', 'WR']. By default, this
+                get all bands in BAND_CONFIG.
+
+        Examples
+            >>> get_ar_bands(['WB', 'WG', 'WR'])
+
+            Returns
+
+            >>> (np.ndarray, ['WB', 'WG', 'WR'])
 
         Returns:
             A tuple of (ar, band_order), where ar is a numpy array of shape
