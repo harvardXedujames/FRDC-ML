@@ -20,10 +20,12 @@ def compute_labels(
         peaks_footprint=200,
         watershed_compactness=0
 ) -> np.ndarray:
-    """ Automatically segments crowns from an NDArray with a series of image processing operations.
+    """ Automatically segments crowns from an NDArray with a series of image
+        processing operations.
 
     Args:
-        ar: NDArray of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
+        ar: NDArray of shape (H, W, C), where C is the number of bands
+        nir_band_ix: Index of NIR Band.
         nir_threshold_value: Threshold value for the NIR band.
         min_crown_size: Minimum crown size in pixels.
         min_crown_hole: Minimum crown hole size in pixels.
@@ -32,8 +34,9 @@ def compute_labels(
         watershed_compactness: Compactness for watershed.
 
     Returns:
-        A tuple of (background, crowns), background is the background image and crowns is a list of np.ndarray crowns.
-        Background is of shape (H, W, C), where C is the number of bands, C is sorted by Band.FILE_NAMES.
+        A tuple of (background, crowns), background is the background image and
+        crowns is a list of np.ndarray crowns.
+        Background is of shape (H, W, C), where C is the number of bands
         Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
     """
     # Raise deprecation worning
@@ -45,8 +48,7 @@ def compute_labels(
     )
 
     ar = scale_0_1_per_band(ar)
-    # ar = scale_static_per_band(ar)
-    ar_mask = threshold_binary_mask(ar, -1, nir_threshold_value)
+    ar_mask = threshold_binary_mask(ar, nir_band_ix, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size,
                                    connectivity=connectivity)
     ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole,
@@ -83,6 +85,23 @@ def scale_static_per_band(
         ar: NDArray of shape (H, W, C), where C is the number of bands.
         order: The order of the bands.
         bounds_config: The bounds config, see BAND_MAX_CONFIG for an example.
+
+    Examples:
+        If you've retrieved the data from `get_ar_bands`, then you can use the
+        order returned from that function. This is the recommended way to use
+        this function.
+
+        >>> ar, order = get_ar_bands()
+        >>> scale_static_per_band(ar, order)
+
+        If you need more control over the order, you can specify it manually.
+        Given that you have an ar of shape (H, W, 3) with order
+        ['WB', 'WG', 'WR']
+
+        >>> scale_static_per_band(
+        >>>     ar, ['WB', 'WG', 'WR']
+        >>>     bounds_config={'WB': (0, 256), 'WG': (0, 256), 'WR': (0, 256)}
+        >>> )
 
     Returns:
         The scaled array.
