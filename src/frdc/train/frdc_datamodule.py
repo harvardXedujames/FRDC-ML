@@ -57,7 +57,7 @@ class FRDCDataModule(LightningDataModule):
     def prepare_data(self):
         ar, order = self.ds.get_ar_bands()
         bounds, labels = self.ds.get_bounds_and_labels()
-        ar_segments = extract_segments_from_bounds(ar, bounds, cropped=False)
+        ar_segments = extract_segments_from_bounds(ar, bounds, cropped=True)
         # self.ar has the shape (batch, height, width, channels)
         self.t = self.ar_segment_transform(ar_segments)
         self.y = torch.from_numpy(self.le.fit_transform(labels))
