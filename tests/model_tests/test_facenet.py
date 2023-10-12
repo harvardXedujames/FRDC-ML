@@ -1,3 +1,11 @@
+""" Tests for the FaceNet model.
+
+This test is done by training a model on the 20201218 dataset, then testing on
+the 20210510 dataset. The test accuracy is then reported into the logs.
+"""
+
+import logging
+
 import lightning as pl
 import torch
 from skimage.transform import resize
@@ -9,6 +17,7 @@ from frdc.preprocess import extract_segments_from_bounds
 from frdc.train import FRDCDataModule, FRDCModule
 
 
+# See FRDCDataModule for fn_segment_tf and fn_split
 def fn_segment_tf(x):
     x = [resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
          for s in x]
@@ -32,7 +41,8 @@ def get_dataset(site, date, version):
     return segments, labels
 
 
-def test_facenet():
+def test_facenet(record_property):
+    # Retrieve the 20201218 dataset
     segments_0, labels_0 = get_dataset(
         'chestnut_nature_park', '20201218', None
     )
@@ -43,13 +53,19 @@ def test_facenet():
         fn_split=fn_split,
         batch_size=BATCH_SIZE
     )
-    m = FRDCModule(
-        model=FaceNet(n_in_channels=8, n_out_classes=len(set(labels_0))))
 
-    trainer = pl.Trainer(max_epochs=10, limit_predict_batches=8)
+    m = FRDCModule(
+        model=FaceNet(n_in_channels=8, n_out_classes=len(set(labels_0)))
+    )
+
+    trainer = pl.Trainer(max_epochs=3)
     trainer.fit(m, datamodule=dm_0)
-    segments_1, labels_1 = get_dataset('chestnut_nature_park', '20210510',
-                                       '90deg43m85pct255deg/map')
+
+    # Retrieve the 20210510 dataset
+    segments_1, labels_1 = get_dataset(
+        'chestnut_nature_park', '20210510',
+        '90deg43m85pct255deg/map'
+    )
     dm_1 = FRDCDataModule(
         segments=segments_1,
         labels=None,
@@ -66,5 +82,8 @@ def test_facenet():
         )
     )
 
+    # Calculate the test accuracy
     test_acc = sum(labels_1 == labels_1_pred) / len(labels_1)
 
+    logging.info(f"Test accuracy: {test_acc:.2%}")
+    record_property('accuracy', test_acc)
