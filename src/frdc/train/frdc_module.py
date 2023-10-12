@@ -32,5 +32,10 @@ class FRDCModule(LightningModule):
         self.log('test_loss', loss)
         return loss
 
+    def predict_step(self, batch, batch_idx, dataloader_idx=None):
+        x = batch[0]
+        y_hat = self(x)
+        return y_hat
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
