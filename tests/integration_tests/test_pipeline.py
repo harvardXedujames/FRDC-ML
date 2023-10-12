@@ -1,126 +1,88 @@
 import logging
 
-import numpy as np
-from scipy.special import kl_div
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
+import lightning as pl
+import torch
+from skimage.transform import resize
+from torch.utils.data import random_split
 
-from frdc.evaluate import dummy_evaluate
+from frdc.models import FaceNet
 from frdc.preprocess import extract_segments_from_labels, \
     extract_segments_from_bounds
-from frdc.train import dummy_train
+from frdc.train import FRDCDataModule, FRDCModule
 from utils import get_labels
 
 
-def test_auto_segmentation_pipeline(ds):
-    """ Tests the use case where we just want to automatically segment the image. """
+def fn_segment_tf(x):
+    x = [resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
+         for s in x]
+    x = [torch.from_numpy(s) for s in x]
+    x = torch.stack(x)
+    x = torch.nan_to_num(x)
+    x = x.permute(0, 3, 1, 2)
+    return x
 
+
+fn_split = lambda x: random_split(x, lengths=[len(x) - 6, 3, 3])
+
+BATCH_SIZE = 3
+
+
+def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
+    """ Manually segment the image according to bounds.csv,
+        then train a model on it. """
+
+    ar, order = ds.get_ar_bands()
+    bounds, labels = ds.get_bounds_and_labels()
+    segments = extract_segments_from_bounds(ar, bounds, cropped=True)
+
+    dm = FRDCDataModule(
+        segments=segments,
+        labels=labels,
+        fn_segment_tf=fn_segment_tf,
+        fn_split=fn_split,
+        batch_size=BATCH_SIZE
+    )
+    m = FRDCModule(model=FaceNet())
+
+    trainer = pl.Trainer(fast_dev_run=True)
+    trainer.fit(m, datamodule=dm)
+
+    val_loss = trainer.validate(m, datamodule=dm)[0]['val_loss']
+    test_loss = trainer.test(m, datamodule=dm)[0]['test_loss']
+
+    logging.debug(f"Validation score: {val_loss:.2%}")
+    logging.debug(f"Test score: {test_loss:.2%}")
+
+    return m, dm
+
+
+def test_auto_segmentation_pipeline(ds):
+    """ Automatically segment the image, then use a model to predict. """
+
+    # Auto segmentation
     ar, order = ds.get_ar_bands()
     ar_labels = get_labels(ar, order)
-    ar_segments = extract_segments_from_labels(ar, ar_labels)
+    segments_auto = extract_segments_from_labels(ar, ar_labels)
 
+    # Get our model trained on the bounds.csv
+    m, _ = test_manual_segmentation_pipeline(ds)
 
-def test_manual_segmentation_pipeline(ds):
-    """ Test the use case where we manually segment the image, then train a model on it. """
-    ar, order = ds.get_ar_bands()
-    ar = np.nan_to_num(ar)
-    bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar, bounds, cropped=False)
+    # Construct our datamodule for prediction
+    dm_auto = FRDCDataModule(
+        segments=segments_auto,
+        labels=None,  # Labels can be none if we just want predictions.
+        fn_segment_tf=fn_segment_tf,
+        fn_split=fn_split,
+        batch_size=BATCH_SIZE
+    )
 
-    X = np.stack(segments)
-    y = LabelEncoder().fit_transform(labels)
+    trainer = pl.Trainer(fast_dev_run=True)
+    # The predictions have a shape of (N, C), where N is the number of
+    # segments, and C is the number of classes.
+    predictions = torch.concat(trainer.predict(m, datamodule=dm_auto))
 
-    # TODO: We'll need to be smart on how we split the data.
-    X_train, X_val, X_test = X[:-6], X[-6:-3], X[-3:]
-    y_train, y_val, y_test = y[:-6], y[-6:-3], y[-3:]
+    assert predictions.shape[0] == len(segments_auto), \
+        "Expected the same number of predictions as segments."
 
-    feature_extraction, classifier, val_score = dummy_train(X_train=X_train,
-                                                            y_train=y_train,
-                                                            X_val=X_val,
-                                                            y_val=y_val)
-    test_score = dummy_evaluate(feature_extraction=feature_extraction,
-                                classifier=classifier,
-                                X_test=X_test, y_test=y_test)
-
-    logging.debug(f"Validation score: {val_score:.2%}")
-    logging.debug(f"Test score: {test_score:.2%}")
-
-    return feature_extraction, classifier
-
-
-def test_unlabelled_prediction(ds):
-    """ Test the use case where we have unlabelled data, and we want to predict the labels. """
-    ar, order = ds.get_ar_bands()
-    bounds, labels = ds.get_bounds_and_labels()
-
-    # TODO: We need to revisit how "unlabelled" is defined.
-    unlabelled_bounds = [b for b, l in zip(bounds, labels) if l == 'Tree 1']
-    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds,
-                                                       cropped=False)
-    X = np.stack(unlabelled_segments)
-    feature_extraction, classifier = test_manual_segmentation_pipeline(ds)
-    X = feature_extraction(X)
-    y_pred = classifier.predict(X)
-
-
-def test_consistency_sampling(ds):
-    """ Test the use case where we want to sample most inconsistent segments from unlabeled data.
-
-    In order to do this, we need to:
-    1) Extract unlabelled segments
-    2) Augment the unlabelled segments
-    3) Predict the labels of the augmented segments
-    4) Calculate the KL Divergence between the predictions
-    5) Calculate the inconsistency of the KL Divergence
-    6) Sample the most inconsistent segments
-
-    """
-    ar, order = ds.get_ar_bands()
-    bounds, labels = ds.get_bounds_and_labels()
-
-    # TODO: We need to revisit how "unlabelled" is defined.
-    unlabelled_bounds = [b for b, l in zip(bounds, labels) if l == 'Tree 1']
-    unlabelled_segments = extract_segments_from_bounds(ar, unlabelled_bounds,
-                                                       cropped=False)
-
-    X = np.stack(unlabelled_segments)
-    feature_extraction, classifier = test_manual_segmentation_pipeline(ds)
-    classifier: RandomForestClassifier
-
-    # TODO: Add actual augmentations
-    N_AUGMENTS = 10
-    augments = [
-        lambda x: x[np.random.choice(range(X.shape[0]), X.shape[0],
-                                     replace=False)]
-        for _ in range(N_AUGMENTS)
-    ]
-
-    y_pred_probas = []
-    for augment in augments:
-        X_features = feature_extraction(augment(X))
-        y_pred_probas.append(classifier.predict_proba(X_features))
-
-    y_pred_probas = np.stack(y_pred_probas)
-    n_augs, n_labs, n_probs = y_pred_probas.shape
-
-    # We want a KL Div between all the augmentations.
-    # ar_kl: np.ndarray matrix of shape (n_labs, n_augs, n_augs)
-    # E.g. ar_kl[2, 0, 4] measures the KL Divergence of the 3rd label between the 1st and 5th augmentations.
-    ar_kl = np.zeros((n_labs, n_augs, n_augs))
-
-    for label_ix in range(n_labs):
-        for aug_i in range(n_augs):
-            for aug_j in range(aug_i):
-                kl = kl_div(y_pred_probas[aug_i, label_ix] + 1e-10,
-                            y_pred_probas[aug_j, label_ix] + 1e-10)
-                ar_kl[label_ix, aug_i, aug_j] = kl.sum()
-                ar_kl[label_ix, aug_j, aug_i] = kl.sum()
-
-    # TODO: Not sure how to calculate the inconsistency. We'll use the variance for now.
-    ar_inconsistency = ar_kl.var(axis=(1, 2))
-
-    # TODO: We sample the 3 most inconsistent segments.
-    n_samples = 3
-    ar_top_3_inconsistency = ar_inconsistency.argsort()[-n_samples:][::-1]
-
-    print(ar_top_3_inconsistency)
+    logging.debug(f"Predictions: {predictions}")
+    logging.debug(f"Class Predictions: {torch.argmax(predictions, dim=1)}")
