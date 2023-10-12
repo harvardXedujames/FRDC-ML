@@ -41,6 +41,7 @@ jobs:
           python -m pip install flake8 pytest poetry          
           poetry export --without-hashes -o requirements.txt
           pip install -r requirements.txt
+          pip install torch 
           pip install lightning
 
       - name: Lint with flake8
@@ -50,22 +51,8 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-#      - name: Test with pytest
-##        env:
-##          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
-#        run: |
-#          pytest
-
-      - name: Report accuracy
+      - name: Test with pytest
         run: |
-          ACCURACY=0.95  # Assuming this script returns your accuracy
-          AUTHOR=$(jq --raw-output .pull_request.user.login "$GITHUB_EVENT_PATH")
-          COMMENT="Hello ${AUTHOR}, the accuracy of your model was ${ACCURACY}."
-          PR=$(jq --raw-output .number "$GITHUB_EVENT_PATH")
-          REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
-          curl \
-            -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/"$REPO_FULLNAME"/issues/"$PR"/comments \
-            -d "{\"body\": \"$COMMENT\"}"
+          pytest
+
+
