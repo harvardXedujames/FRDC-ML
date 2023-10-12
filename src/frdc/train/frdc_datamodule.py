@@ -79,8 +79,29 @@ class FRDCDataModule(LightningDataModule):
 
     def setup(self, stage=None):
         # Split dataset into train, val, test
-        tds = TensorDataset(self.t, self.y)
-        self.train_ds, self.val_ds, self.test_ds = self.td_split(tds)
+        self.x = self.fn_segment_tf(self.segments)
+
+        assert torch.isnan(self.x).sum() == 0, \
+            "Found NaN values in the segments."
+        assert self.x.ndim == 4, \
+            (f"Expected 4 dimensions, got {self.x.ndim} dimensions of shape"
+             f" {self.x.shape}.")
+
+        if stage in ['fit', 'validate', 'test']:
+            if self.labels is None:
+                raise ValueError("Provide labels for fit, validate, or test.")
+
+            self.y = torch.from_numpy(self.le.fit_transform(self.labels))
+            assert self.x.shape[0] == self.y.shape[0], \
+                (f"Expected same number of samples for x and y, got"
+                 f" {self.x.shape[0]} for x and {self.y.shape[0]} for y.")
+
+            tds = TensorDataset(self.x, self.y)
+            self.train_ds, self.val_ds, self.test_ds = self.fn_split(tds)
+
+        elif stage == 'predict':
+            tds = TensorDataset(self.x)
+            self.predict_ds = tds
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size,
