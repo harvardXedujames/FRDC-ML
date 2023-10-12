@@ -10,9 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 
 
-@dataclass(
-    kw_only=True
-)
+@dataclass  # (kw_only=True) # only available when we use Py3.10
 class FRDCDataModule(LightningDataModule):
     """ FRDC Data Module.
 
