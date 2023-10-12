@@ -71,10 +71,10 @@ class FRDCDataModule(LightningDataModule):
     batch_size: int = 4
     le: LabelEncoder = LabelEncoder()
 
-    train_ds: Dataset = field(init=False)
-    val_ds: Dataset = field(init=False)
-    test_ds: Dataset = field(init=False)
-    predict_ds: Dataset = field(init=False)
+    train_ds: Dataset = field(init=False, default=None)
+    val_ds: Dataset = field(init=False, default=None)
+    test_ds: Dataset = field(init=False, default=None)
+    predict_ds: Dataset = field(init=False, default=None)
 
     def __post_init__(self):
         super().__init__()
