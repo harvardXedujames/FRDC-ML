@@ -16,6 +16,8 @@ class FRDCModule(LightningModule):
         y_hat = self(x)
         loss = nn.CrossEntropyLoss()(y_hat, y)
         self.log('loss', loss, prog_bar=True)
+        self.log('acc', (y_hat.argmax(dim=1) == y).float().mean(),
+                 prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -23,6 +25,8 @@ class FRDCModule(LightningModule):
         y_hat = self(x)
         loss = nn.CrossEntropyLoss()(y_hat, y)
         self.log('val_loss', loss)
+        self.log('val_acc', (y_hat.argmax(dim=1) == y).float().mean(),
+                 prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -30,6 +34,7 @@ class FRDCModule(LightningModule):
         y_hat = self(x)
         loss = nn.CrossEntropyLoss()(y_hat, y)
         self.log('test_loss', loss)
+        self.log('test_acc', (y_hat.argmax(dim=1) == y).float().mean())
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
