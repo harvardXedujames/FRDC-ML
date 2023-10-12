@@ -28,7 +28,9 @@ def fn_segment_tf(x):
     return x
 
 
-fn_split = lambda x: random_split(x, lengths=[len(x) - 3, 3, 0])
+def fn_split(x):
+    return random_split(x, lengths=[len(x) - 3, 3, 0])
+
 
 BATCH_SIZE = 5
 
