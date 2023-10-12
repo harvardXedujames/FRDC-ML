@@ -228,8 +228,8 @@ class FRDCDataset:
         d: dict[str, np.ndarray] = self.get_ar_bands_as_dict(bands)
         return np.concatenate(list(d.values()), axis=-1), list(d.keys())
 
-    def get_bounds_and_labels(self, file_name='bounds.csv') -> tuple[
-        Iterable[Rect], Iterable[str]]:
+    def get_bounds_and_labels(self, file_name='bounds.csv'
+                              ) -> tuple[list[Rect], list[str]]:
         """ Gets the bounds and labels from the bounds.csv file.
 
         Notes:
