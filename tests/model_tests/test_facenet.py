@@ -7,22 +7,31 @@ the 20210510 dataset. The test accuracy is then reported into the logs.
 import logging
 
 import lightning as pl
+import numpy as np
 import torch
 from skimage.transform import resize
 from torch.utils.data import random_split
 
+from frdc.conf import BAND_CONFIG
 from frdc.load import FRDCDataset
 from frdc.models import FaceNet
-from frdc.preprocess import extract_segments_from_bounds
+from frdc.preprocess import extract_segments_from_bounds, scale_static_per_band
+from frdc.preprocess.augmentation import glcm_padded
 from frdc.train import FRDCDataModule, FRDCModule
 
 
 # See FRDCDataModule for fn_segment_tf and fn_split
 def fn_segment_tf(x):
-    x = [resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
-         for s in x]
-    x = [torch.from_numpy(s) for s in x]
-    x = torch.stack(x)
+    def per_segment_tf(s):
+        s = scale_static_per_band(s, list(BAND_CONFIG.keys()))
+        s_glcm = glcm_padded(s, step_size=7, bin_from=1, bin_to=8, radius=3)
+        s = np.concatenate([s[..., np.newaxis], s_glcm], axis=-1)
+        s = s.reshape(*s.shape[:2], -1)
+        s = resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
+        s = torch.from_numpy(s)
+        return s
+
+    x = torch.stack([per_segment_tf(xi) for xi in x])
     x = torch.nan_to_num(x)
     x = x.permute(0, 3, 1, 2)
     return x
@@ -43,7 +52,7 @@ def get_dataset(site, date, version):
     return segments, labels
 
 
-def test_facenet(record_property):
+def test_facenet():
     # Retrieve the 20201218 dataset
     segments_0, labels_0 = get_dataset(
         'chestnut_nature_park', '20201218', None
@@ -57,7 +66,7 @@ def test_facenet(record_property):
     )
 
     m = FRDCModule(
-        model=FaceNet(n_in_channels=8, n_out_classes=len(set(labels_0)))
+        model=FaceNet(n_in_channels=64, n_out_classes=len(set(labels_0)))
     )
 
     trainer = pl.Trainer(max_epochs=3)
@@ -88,4 +97,3 @@ def test_facenet(record_property):
     test_acc = sum(labels_1 == labels_1_pred) / len(labels_1)
 
     logging.info(f"Test accuracy: {test_acc:.2%}")
-    record_property('accuracy', test_acc)
