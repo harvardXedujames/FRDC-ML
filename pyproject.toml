@@ -10,12 +10,14 @@ packages = [{ include = "src/frdc" }]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
 numpy = "^1.25.2"
-scikit-image = "^0.21.0"
+scikit-image = "0.22.0"
 scikit-learn = "^1.3.0"
 seaborn = "^0.12.2"
 matplotlib = "^3.7.3"
 google-cloud-storage = "^2.10.0"
 tqdm = "^4.66.1"
+cupy-cuda12x = "^12.2.0"
+glcm-cupy = "0.2.1"
 
 
 [[tool.poetry.source]]
