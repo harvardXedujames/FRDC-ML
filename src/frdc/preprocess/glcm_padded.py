@@ -11,10 +11,6 @@ def make_hashable(x: object) -> Hashable:
     return x if isinstance(x, np.ndarray) else str(x)
 
 
-@file_cache(fn_cache_fp=lambda x: ROOT_DIR / ".cache" / f"glcm_{x}.npy",
-            fn_load_object=np.load,
-            fn_save_object=np.save,
-            fn_make_hashable=make_hashable)
 def glcm_padded(
         ar: np.ndarray,
         *,
@@ -27,8 +23,8 @@ def glcm_padded(
     """ A wrapper for glcm-cupy's glcm. This pads the GLCM automatically
 
     Notes:
-        This function is also cached. The cache is invalidated if any of the
-        arguments change.
+        This function is not cached. Use glcm_padded_cached instead if you want
+        to cache the GLCM.
 
     Args:
         ar: Array to compute GLCM on. Must be of shape (H, W, C)
@@ -56,3 +52,37 @@ def glcm_padded(
         step_size=step_size,
         **kwargs
     )
+
+
+@file_cache(fn_cache_fp=lambda x: ROOT_DIR / ".cache" / f"glcm_{x}.npy",
+            fn_load_object=np.load,
+            fn_save_object=np.save,
+            fn_make_hashable=make_hashable)
+def glcm_padded_cached(
+        ar: np.ndarray,
+        *,
+        bin_from: int,
+        bin_to: int,
+        radius: int,
+        step_size: int = 1,
+        **kwargs):
+    """ A wrapper for glcm-cupy's glcm. This pads the GLCM automatically
+
+    Notes:
+        This function is also cached. The cache is invalidated if any of the
+        arguments change.
+
+    Args:
+        ar: Array to compute GLCM on. Must be of shape (H, W, C)
+        bin_from: The upper bounds integer for the input
+        bin_to: The resolution of the GLCM
+        radius: Radius of each GLCM window
+        step_size: Step size of each GLCM window
+        **kwargs: Additional arguments to pass to glcm-cupy's glcm
+
+    Returns:
+        Given an input (H, W, C), returns a
+        GLCM of shape (H, W, C, GLCM Features)
+    """
+    glcm_padded(ar, bin_from=bin_from, bin_to=bin_to, radius=radius,
+                step_size=step_size, **kwargs)
