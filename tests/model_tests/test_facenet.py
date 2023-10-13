@@ -15,8 +15,9 @@ from torch.utils.data import random_split
 from frdc.conf import BAND_CONFIG
 from frdc.load import FRDCDataset
 from frdc.models import FaceNet
-from frdc.preprocess import extract_segments_from_bounds, scale_static_per_band
-from frdc.preprocess.augmentation import glcm_padded
+from frdc.preprocess import (
+    extract_segments_from_bounds, scale_static_per_band, glcm_padded
+)
 from frdc.train import FRDCDataModule, FRDCModule
 
 
@@ -24,7 +25,10 @@ from frdc.train import FRDCDataModule, FRDCModule
 def fn_segment_tf(x):
     def per_segment_tf(s):
         s = scale_static_per_band(s, list(BAND_CONFIG.keys()))
+
+        # Call the glcm_padded_cached if you want to cache the GLCM
         s_glcm = glcm_padded(s, step_size=7, bin_from=1, bin_to=8, radius=3)
+
         s = np.concatenate([s[..., np.newaxis], s_glcm], axis=-1)
         s = s.reshape(*s.shape[:2], -1)
         s = resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
