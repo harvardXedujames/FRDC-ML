@@ -16,8 +16,9 @@ from frdc.conf import BAND_CONFIG
 from frdc.load import FRDCDataset
 from frdc.models import FaceNet
 from frdc.preprocess import (
-    extract_segments_from_bounds, scale_static_per_band, glcm_padded
+    extract_segments_from_bounds, scale_static_per_band
 )
+# from frdc.preprocess.glcm_padded import glcm_padded
 from frdc.train import FRDCDataModule, FRDCModule
 
 
