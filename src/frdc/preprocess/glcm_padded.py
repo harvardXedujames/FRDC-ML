@@ -84,5 +84,5 @@ def glcm_padded_cached(
         Given an input (H, W, C), returns a
         GLCM of shape (H, W, C, GLCM Features)
     """
-    glcm_padded(ar, bin_from=bin_from, bin_to=bin_to, radius=radius,
+    return glcm_padded(ar, bin_from=bin_from, bin_to=bin_to, radius=radius,
                 step_size=step_size, **kwargs)
