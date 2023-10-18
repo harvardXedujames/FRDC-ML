@@ -168,3 +168,5 @@ rsc/**/*.tif
 .secrets/
 # REMOVE ONLY IF THE SECRET FILES ARE IN .secrets
 *.json
+
+**/*/lightning_logs
