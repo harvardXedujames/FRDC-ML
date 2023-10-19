@@ -11,7 +11,7 @@ MIN_SIZE = FaceNet.MIN_SIZE
 
 @pytest.fixture(scope='module')
 def facenet():
-    return FaceNet(n_in_channels=N_CHANNELS, n_out_classes=N_CLASSES)
+    return FaceNet(n_out_classes=N_CLASSES)
 
 
 @pytest.mark.parametrize(
