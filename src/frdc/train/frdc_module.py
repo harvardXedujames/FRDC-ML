@@ -54,7 +54,6 @@ class FRDCModule(LightningModule):
         return y_hat
 
     def configure_optimizers(self):
-        # Add onecycle lr
         optim = self.optim(self.parameters(), **self.optim_kwargs)
         scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=optim,
