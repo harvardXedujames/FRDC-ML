@@ -8,6 +8,7 @@ import torch
 from lightning import LightningDataModule
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader, TensorDataset, Dataset
+from pipeline.model_tests.utils import Functional as F
 
 
 @dataclass  # (kw_only=True) # only available when we use Py3.10
@@ -28,7 +29,7 @@ class FRDCDataModule(LightningDataModule):
              while common image libs expect shapes (H, W, C).
         labels: A list of labels as strings. If None, then the datamodule
             will not have train, val, test datasets.
-        fn_segment_tf: Transform applied to the segments.
+        fn_segments_tf: Transform applied to the segments.
             It takes a list of segments, returning a batched tensor:
              (batch, height, width, channels).
             In FRDC, each segment is the tree crown segment, the output
@@ -62,10 +63,11 @@ class FRDCDataModule(LightningDataModule):
 
     """
     segments: list[np.ndarray]
-    fn_segment_tf: Callable[[list[np.ndarray]], torch.Tensor]
+    fn_segments_tf: Callable[[list[np.ndarray]], torch.Tensor]
+    fn_aug_tf: Callable[[torch.Tensor], torch.Tensor]
     labels: list[str] | None = None
     fn_split: (Callable[[TensorDataset],
-               Collection[Dataset, Dataset, Dataset]] | None) = None,
+    Collection[Dataset, Dataset, Dataset]] | None) = None,
     batch_size: int = 4
     le: LabelEncoder = LabelEncoder()
 
@@ -78,8 +80,7 @@ class FRDCDataModule(LightningDataModule):
         super().__init__()
 
     def setup(self, stage=None):
-        # Split dataset into train, val, test
-        x = self.fn_segment_tf(self.segments)
+        x = self.fn_segments_tf(self.segments)
 
         assert torch.isnan(x).sum() == 0, \
             "Found NaN values in the segments."
@@ -103,6 +104,13 @@ class FRDCDataModule(LightningDataModule):
         elif stage == 'predict':
             tds = TensorDataset(x)
             self.predict_ds = tds
+
+    def on_before_batch_transfer(self, batch, dataloader_idx: int):
+        if self.trainer.training:
+            x, y = batch
+            x = self.fn_aug_tf(x)
+            batch = x, y
+        return batch
 
     def train_dataloader(self):
         return DataLoader(self.train_ds, batch_size=self.batch_size,
