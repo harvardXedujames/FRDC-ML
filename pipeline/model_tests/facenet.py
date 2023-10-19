@@ -7,7 +7,8 @@ the 20210510 dataset.
 import lightning as pl
 import numpy as np
 import torch
-from lightning.pytorch.callbacks import LearningRateMonitor
+from keras.src.callbacks import EarlyStopping
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from torch.utils.data import TensorDataset, Dataset, Subset
 from torchvision.transforms.v2 import RandomHorizontalFlip, RandomVerticalFlip, \
     Resize
@@ -94,8 +95,11 @@ dm = FRDCDataModule(
 trainer = pl.Trainer(
     max_epochs=EPOCHS, deterministic=True,
     log_every_n_steps=4,
+
     callbacks=[
-        LearningRateMonitor(logging_interval='epoch')
+        EarlyStopping(monitor='val_loss', patience=4, mode='min'),
+        LearningRateMonitor(logging_interval='epoch'),
+        ModelCheckpoint(monitor='val_loss', mode='min', save_top_k=1)
     ]
 )
 
