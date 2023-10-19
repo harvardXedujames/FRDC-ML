@@ -51,23 +51,6 @@ class Functional:
         return ar.reshape(*ar.shape[:2], -1)
 
     @staticmethod
-    def pca_threshold(x: np.ndarray,
-                      n_components: int = 5) -> np.ndarray:
-        """ PCA thresholding
-
-        Args:
-            x: The array to threshold
-            n_components: The number of components to keep
-
-        Returns:
-            The thresholded array
-        """
-
-        pca = PCA(n_components=n_components)
-        pca_x = pca.fit_transform(x)
-        return pca.inverse_transform(pca_x)
-
-    @staticmethod
     def center_crop(t: torch.Tensor,
                     size: int = FaceNet.MIN_SIZE) -> torch.Tensor:
         return torchvision.transforms.functional.center_crop(t, size)
@@ -95,27 +78,8 @@ class Functional:
 
         return rc(t)
 
-    @staticmethod
-    def random_rotation(t: torch.Tensor,
-                        degrees: float = 10) -> torch.Tensor:
-        rr = torchvision.transforms.RandomRotation(
-            degrees=degrees,
-            interpolation=torchvision.transforms.InterpolationMode.BILINEAR,
-            expand=True
-        )
 
-        return rr(t)
-
-    @staticmethod
-    def random_flip(t: torch.Tensor) -> torch.Tensor:
-        rhf = torchvision.transforms.RandomHorizontalFlip()
-        rvf = torchvision.transforms.RandomVerticalFlip()
-        return rhf(rvf(t))
-
-    @staticmethod
-    def l2_norm(ar: np.ndarray) -> np.ndarray:
-        return ar / np.linalg.norm(ar, ord=2)
 
     @staticmethod
     def whiten(ar: np.ndarray) -> np.ndarray:
-        return (ar - np.mean(ar)) / np.std(ar)
+        return (ar - np.nanmean(ar)) / np.nanstd(ar)
