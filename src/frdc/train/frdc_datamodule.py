@@ -61,7 +61,7 @@ class FRDCDataModule(LightningDataModule):
     """
     segments: list[np.ndarray]
     preprocess: Callable[[list[np.ndarray]], torch.Tensor]
-    augmentation: Callable[[torch.Tensor], torch.Tensor]
+    augmentation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x
     labels: list[str] | None = None
     train_val_test_split: (
             Callable[
