@@ -32,12 +32,17 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     return t
 
 
-# See FRDCDataModule for fn_segment_tf and fn_split
 def preprocess(l_ar: list[np.ndarray]) -> torch.Tensor:
-    """ We structure the transformations into 3 levels.
-    1. Segments transformation
-    2. Per segment transformation
-    3. Per channel transformation
+    """ Preprocesses a list of segments.
+
+    Notes:
+        We structure the transformations into 3 levels.
+        1. Segments transformation (This function)
+        2. Per segment transformation (segment_preprocess)
+        3. Per channel transformation (channel_preprocess)
+
+    Returns:
+        A preprocessed tensor of shape: (batch, channels, height, width)
     """
 
     l_t: list[torch.Tensor] = [segment_preprocess(ar) for ar in l_ar]
