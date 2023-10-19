@@ -8,7 +8,6 @@ import torch
 from lightning import LightningDataModule
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader, TensorDataset, Dataset
-from pipeline.model_tests.utils import Functional as F
 
 
 @dataclass  # (kw_only=True) # only available when we use Py3.10
@@ -29,14 +28,14 @@ class FRDCDataModule(LightningDataModule):
              while common image libs expect shapes (H, W, C).
         labels: A list of labels as strings. If None, then the datamodule
             will not have train, val, test datasets.
-        fn_segments_tf: Transform applied to the segments.
+        preprocess: Transform applied to the segments.
             It takes a list of segments, returning a batched tensor:
              (batch, height, width, channels).
             In FRDC, each segment is the tree crown segment, the output
              should be a batched image of all the crown segments.
             See Examples for more details.
-        fn_split: This is a function that takes a TensorDataset and splits
-            it into train, val, test TensorDatasets.
+        train_val_test_split: This is a function that takes a TensorDataset
+            and splits it into train, val, test Datasets.
             See Examples for more details.
         batch_size: The batch size to use for the dataloaders.
 
@@ -49,9 +48,7 @@ class FRDCDataModule(LightningDataModule):
         >>> from frdc.models import FaceNet
         >>>
         >>> fn_segment_tf=lambda x: torch.stack([
-        >>>     torch.from_numpy(
-        >>>         resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
-        >>>     ) for s in x
+        >>>     torch.from_numpy(resize(s, FaceNet.MIN_SIZE)) for s in x
         >>> ]).permute(0, 3, 1, 2)
 
         The fn_split could be a function that splits the dataset into
@@ -63,11 +60,14 @@ class FRDCDataModule(LightningDataModule):
 
     """
     segments: list[np.ndarray]
-    fn_segments_tf: Callable[[list[np.ndarray]], torch.Tensor]
-    fn_aug_tf: Callable[[torch.Tensor], torch.Tensor]
+    preprocess: Callable[[list[np.ndarray]], torch.Tensor]
+    augmentation: Callable[[torch.Tensor], torch.Tensor]
     labels: list[str] | None = None
-    fn_split: (Callable[[TensorDataset],
-    Collection[Dataset, Dataset, Dataset]] | None) = None,
+    train_val_test_split: (
+            Callable[
+                [TensorDataset],
+                Collection[Dataset, Dataset, Dataset]
+            ] | None) = None,
     batch_size: int = 4
     le: LabelEncoder = LabelEncoder()
 
@@ -80,7 +80,7 @@ class FRDCDataModule(LightningDataModule):
         super().__init__()
 
     def setup(self, stage=None):
-        x = self.fn_segments_tf(self.segments)
+        x = self.preprocess(self.segments)
 
         assert torch.isnan(x).sum() == 0, \
             "Found NaN values in the segments."
@@ -89,7 +89,7 @@ class FRDCDataModule(LightningDataModule):
              f" {x.shape}.")
 
         if stage in ['fit', 'validate', 'test']:
-            if self.labels is None or self.fn_split is None:
+            if self.labels is None or self.train_val_test_split is None:
                 raise ValueError("Labels and fn_split must be provided for"
                                  " train, val, test datasets.")
 
@@ -99,7 +99,9 @@ class FRDCDataModule(LightningDataModule):
                  f" {x.shape[0]} for x and {y.shape[0]} for y.")
 
             tds = TensorDataset(x, y)
-            self.train_ds, self.val_ds, self.test_ds = self.fn_split(tds)
+            self.train_ds, self.val_ds, self.test_ds = (
+                self.train_val_test_split(tds)
+            )
 
         elif stage == 'predict':
             tds = TensorDataset(x)
@@ -108,7 +110,7 @@ class FRDCDataModule(LightningDataModule):
     def on_before_batch_transfer(self, batch, dataloader_idx: int):
         if self.trainer.training:
             x, y = batch
-            x = self.fn_aug_tf(x)
+            x = self.augmentation(x)
             batch = x, y
         return batch
 
