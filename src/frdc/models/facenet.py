@@ -9,13 +9,10 @@ class FaceNet(nn.Module):
     INCEPTION_IN_CHANNELS = 3
     MIN_SIZE = 299
 
-    def __init__(self,
-                 n_in_channels: int = 8,
-                 n_out_classes: int = 10):
+    def __init__(self, n_out_classes: int = 10):
         """ Initialize the FaceNet model.
 
         Args:
-            n_in_channels: The number of input channels (bands)
             n_out_classes: The number of output classes
 
         Notes:
@@ -25,17 +22,6 @@ class FaceNet(nn.Module):
             Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
         """
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels=n_in_channels,
-                               out_channels=10, kernel_size=3,
-                               padding=1)
-        self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=7, kernel_size=3,
-                               padding=1)
-        self.relu2 = nn.ReLU()
-        self.conv3 = nn.Conv2d(in_channels=7,
-                               out_channels=self.INCEPTION_IN_CHANNELS,
-                               kernel_size=1)
-        self.relu3 = nn.ReLU()
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
@@ -46,12 +32,13 @@ class FaceNet(nn.Module):
         for param in self.inception.parameters():
             param.requires_grad = False
 
-        self.fc = nn.Linear(self.INCEPTION_OUT_DIMS, n_out_classes)
-
-        self.feature_extraction = nn.Sequential(
-            self.conv1, self.relu1,
-            self.conv2, self.relu2,
-            self.conv3, self.relu3,
+        # self.fc = nn.Linear(self.INCEPTION_OUT_DIMS, n_out_classes)
+        self.fc = nn.Sequential(
+            nn.BatchNorm1d(self.INCEPTION_OUT_DIMS),
+            nn.Linear(self.INCEPTION_OUT_DIMS, self.INCEPTION_OUT_DIMS // 2),
+            nn.BatchNorm1d(self.INCEPTION_OUT_DIMS // 2),
+            nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_out_classes),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x: torch.Tensor):
@@ -66,16 +53,16 @@ class FaceNet(nn.Module):
         """
 
         if (
-                x.shape[0] < 2 or
+                any(s == 1 for s in x.shape) or
                 x.shape[2] < self.MIN_SIZE or
                 x.shape[3] < self.MIN_SIZE
         ):
             raise RuntimeError(
                 f'Input shape {x.shape} must adhere to the following:\n'
-                f' - Batch size >= 2\n'
-                f' - Height >= {self.MIN_SIZE}\n'
+                f' - No singleton dimensions\n'
+                f' - Size >= {self.MIN_SIZE}\n'
             )
-        x = self.feature_extraction(x)
+        # x = self.feature_extraction(x)
 
         # During training, the auxiliary outputs are used for auxiliary loss,
         # but during testing, only the main output is used.

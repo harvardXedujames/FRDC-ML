@@ -53,6 +53,7 @@ def file_cache(
                 x.update(fn_make_hashable(v))
             hash_str = x.hexdigest()
             cache_fp = fn_cache_fp(hash_str)
+            cache_fp.parent.mkdir(parents=True, exist_ok=True)
 
             if cache_fp.exists():
                 return fn_load_object(cache_fp)

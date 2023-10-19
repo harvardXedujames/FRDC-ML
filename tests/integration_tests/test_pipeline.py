@@ -38,11 +38,17 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
     dm = FRDCDataModule(
         segments=segments,
         labels=labels,
-        fn_segment_tf=fn_segment_tf,
-        fn_split=fn_split,
+        preprocess=fn_segment_tf,
+        train_val_test_split=fn_split,
+        augmentation=lambda x: x,
         batch_size=BATCH_SIZE
     )
-    m = FRDCModule(model=FaceNet())
+    m = FRDCModule(
+        model_cls=FaceNet,
+        model_kwargs={'n_out_classes': 10},
+        optim_cls=torch.optim.Adam,
+        optim_kwargs=dict(lr=1e-3),
+    )
 
     trainer = pl.Trainer(fast_dev_run=True)
     trainer.fit(m, datamodule=dm)
@@ -71,8 +77,8 @@ def test_auto_segmentation_pipeline(ds):
     dm_auto = FRDCDataModule(
         segments=segments_auto,
         labels=None,  # Labels can be none if we just want predictions.
-        fn_segment_tf=fn_segment_tf,
-        fn_split=fn_split,
+        preprocess=fn_segment_tf,
+        train_val_test_split=fn_split,
         batch_size=BATCH_SIZE
     )
 

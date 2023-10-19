@@ -4,9 +4,20 @@ from torch import nn
 
 
 class FRDCModule(LightningModule):
-    def __init__(self, model: nn.Module):
+
+    def __init__(
+            self,
+            *,
+            model_cls: type[nn.Module],
+            model_kwargs: dict,
+            optim_cls: type[torch.optim.Optimizer],
+            optim_kwargs: dict,
+    ):
         super().__init__()
-        self.model = model
+        self.save_hyperparameters()
+        self.model = model_cls(**model_kwargs)
+        self.optim = optim_cls
+        self.optim_kwargs = optim_kwargs
 
     def forward(self, x):
         return self.model(x)
@@ -43,4 +54,9 @@ class FRDCModule(LightningModule):
         return y_hat
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        optim = self.optim(self.parameters(), **self.optim_kwargs)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=optim,
+            gamma=0.99,
+        )
+        return [optim], [scheduler]
