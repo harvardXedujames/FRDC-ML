@@ -4,7 +4,7 @@ import torch
 from frdc.models import FaceNet
 
 N_CLASSES = 42
-N_CHANNELS = 2
+N_CHANNELS = 3
 BATCH_SIZE = 2
 MIN_SIZE = FaceNet.MIN_SIZE
 
@@ -17,20 +17,18 @@ def facenet():
 @pytest.mark.parametrize(
     ['batch_size', 'channels', 'size', 'ok'],
     [
+        # Well-formed
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE, True],
+        # Can be a larger image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE + 1, True],
-        [BATCH_SIZE, N_CHANNELS - 1, MIN_SIZE, False],
-        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE, False],
+        # Can have more channels
+        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE + 1, True],
+        # Cannot have a smaller image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE - 1, False],
-        [BATCH_SIZE, N_CHANNELS - 1, MIN_SIZE - 1, False],
-        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE - 1, False],
+        # No Singleton Dimension
         [1, N_CHANNELS, MIN_SIZE, False],
-        [1, N_CHANNELS, MIN_SIZE + 1, False],
-        [1, N_CHANNELS - 1, MIN_SIZE, False],
-        [1, N_CHANNELS + 1, MIN_SIZE, False],
-        [1, N_CHANNELS, MIN_SIZE - 1, False],
-        [1, N_CHANNELS - 1, MIN_SIZE - 1, False],
-        [1, N_CHANNELS + 1, MIN_SIZE - 1, False],
+        # No Singleton Dimension
+        [BATCH_SIZE, 1, MIN_SIZE, False],
     ]
 )
 def test_facenet_io(facenet, batch_size, channels, size, ok):

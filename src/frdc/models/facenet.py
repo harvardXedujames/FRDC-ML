@@ -53,14 +53,14 @@ class FaceNet(nn.Module):
         """
 
         if (
-                x.shape[0] < 2 or
+                any(s == 1 for s in x.shape) or
                 x.shape[2] < self.MIN_SIZE or
                 x.shape[3] < self.MIN_SIZE
         ):
             raise RuntimeError(
                 f'Input shape {x.shape} must adhere to the following:\n'
-                f' - Batch size >= 2\n'
-                f' - Height >= {self.MIN_SIZE}\n'
+                f' - No singleton dimensions\n'
+                f' - Size >= {self.MIN_SIZE}\n'
             )
         # x = self.feature_extraction(x)
 
