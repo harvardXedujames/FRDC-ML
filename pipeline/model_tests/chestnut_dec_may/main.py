@@ -14,9 +14,10 @@ from torchvision.transforms.v2 import RandomHorizontalFlip, RandomVerticalFlip, 
     Resize
 
 from frdc.models import FaceNet
+from frdc.preprocess import scale_0_1_per_band
 from frdc.train import FRDCDataModule, FRDCModule
-from pipeline.model_tests.utils import Functional as F
-from pipeline.model_tests.utils import get_dataset
+from pipeline.model_tests.chestnut_dec_may.utils import Functional as F, \
+    get_dataset
 
 
 # See FRDCDataModule for fn_segment_tf and fn_split
@@ -39,7 +40,7 @@ def preprocess(l_ar: list[np.ndarray]) -> torch.Tensor:
 
         # We divide by 1.001 is make the range [0, 1) instead of [0, 1] so that
         # glcm_padded can work properly.
-        ar = F.scale_0_1_per_band(ar) / 1.001
+        ar = scale_0_1_per_band(ar) / 1.001
         ar = F.glcm(ar)
         ar = np.stack([
             channel_preprocess(ar[..., ch]) for ch in range(ar.shape[-1])

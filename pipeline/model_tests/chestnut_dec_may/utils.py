@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torchvision
 from glcm_cupy import Features
-from sklearn.decomposition import PCA
 from torchvision.transforms.functional import resized_crop
 
 from frdc.load import FRDCDataset
@@ -24,13 +23,7 @@ def get_dataset(site, date, version):
 
 
 class Functional:
-    @staticmethod
-    def scale_static_per_band(ar: np.ndarray) -> np.ndarray:
-        return scale_static_per_band(ar, BANDS)
 
-    @staticmethod
-    def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
-        return scale_0_1_per_band(ar)
 
     @staticmethod
     def glcm(ar: np.ndarray,
@@ -77,8 +70,6 @@ class Functional:
         )
 
         return rc(t)
-
-
 
     @staticmethod
     def whiten(ar: np.ndarray) -> np.ndarray:
