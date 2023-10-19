@@ -38,11 +38,11 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
     dm = FRDCDataModule(
         segments=segments,
         labels=labels,
-        fn_segment_tf=fn_segment_tf,
+        fn_segments_tf=fn_segment_tf,
         fn_split=fn_split,
         batch_size=BATCH_SIZE
     )
-    m = FRDCModule(model=FaceNet())
+    m = FRDCModule(model_cls=FaceNet())
 
     trainer = pl.Trainer(fast_dev_run=True)
     trainer.fit(m, datamodule=dm)
@@ -71,7 +71,7 @@ def test_auto_segmentation_pipeline(ds):
     dm_auto = FRDCDataModule(
         segments=segments_auto,
         labels=None,  # Labels can be none if we just want predictions.
-        fn_segment_tf=fn_segment_tf,
+        fn_segments_tf=fn_segment_tf,
         fn_split=fn_split,
         batch_size=BATCH_SIZE
     )
