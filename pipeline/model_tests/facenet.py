@@ -7,8 +7,10 @@ the 20210510 dataset.
 import lightning as pl
 import numpy as np
 import torch
-import torchvision.transforms.v2.functional
+from lightning.pytorch.callbacks import LearningRateMonitor
 from torch.utils.data import TensorDataset, Dataset, Subset
+from torchvision.transforms.v2 import RandomHorizontalFlip, RandomVerticalFlip, \
+    Resize
 
 from frdc.models import FaceNet
 from frdc.train import FRDCDataModule, FRDCModule
@@ -17,43 +19,49 @@ from pipeline.model_tests.utils import get_dataset
 
 
 # See FRDCDataModule for fn_segment_tf and fn_split
-def fn_segments_tf(l_ar: list[np.ndarray]) -> torch.Tensor:
+def preprocess(l_ar: list[np.ndarray]) -> torch.Tensor:
     """ We structure the transformations into 3 levels.
     1. Segments transformation
     2. Per segment transformation
     3. Per channel transformation
     """
 
-    def chn_tf(ar: np.ndarray) -> np.ndarray:
+    def channel_preprocess(ar: np.ndarray) -> np.ndarray:
+        # Preprocesses a channel array of shape: (H, W)
         shape = ar.shape
         ar_flt = ar.flatten()
         ar_flt = F.whiten(ar_flt)
         return ar_flt.reshape(*shape)
 
-    def segment_tf(ar: np.ndarray) -> torch.Tensor:
+    def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
+        # Preprocesses a segment array of shape: (H, W, C)
+
         # We divide by 1.001 is make the range [0, 1) instead of [0, 1] so that
         # glcm_padded can work properly.
         ar = F.scale_0_1_per_band(ar) / 1.001
         ar = F.glcm(ar)
-        ar = np.stack([chn_tf(ar[..., ch]) for ch in range(ar.shape[-1])])
+        ar = np.stack([
+            channel_preprocess(ar[..., ch]) for ch in range(ar.shape[-1])
+        ])
+
         t = torch.from_numpy(ar)
-        t = torchvision.transforms.v2.functional.resize(t, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE])
-        # t = F.center_crop(t)
+        t = Resize([FaceNet.MIN_SIZE, FaceNet.MIN_SIZE],
+                   antialias=True)(t)
         return t
 
-    l_t: list[torch.Tensor] = [segment_tf(ar) for ar in l_ar]
+    l_t: list[torch.Tensor] = [segment_preprocess(ar) for ar in l_ar]
     t: torch.Tensor = torch.stack(l_t)
     t = torch.nan_to_num(t)
     return t
 
 
-def fn_aug_tf(t: torch.Tensor) -> torch.Tensor:
-    # t = F.random_rotation(t)
-    t = F.random_flip(t)
+def augmentation(t: torch.Tensor) -> torch.Tensor:
+    t = RandomHorizontalFlip()(t)
+    t = RandomVerticalFlip()(t)
     return t
 
 
-def fn_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
+def train_val_test_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
     return [
         Subset(x, list(range(len(segments_0)))),
         Subset(x, list(
@@ -70,22 +78,25 @@ segments_1, labels_1 = get_dataset(
 )
 segments = [*segments_0, *segments_1]
 labels = [*labels_0, *labels_1]
-# %%
 BATCH_SIZE = 5
 EPOCHS = 100
 LR = 1e-3
 
-trainer = pl.Trainer(
-    max_epochs=EPOCHS, deterministic=True,
-    log_every_n_steps=4
-)
 dm = FRDCDataModule(
     segments=segments,
     labels=labels,
-    fn_segments_tf=fn_segments_tf,
-    fn_aug_tf=fn_aug_tf,
-    fn_split=fn_split,
+    preprocess=preprocess,
+    augmentation=augmentation,
+    train_val_test_split=train_val_test_split,
     batch_size=BATCH_SIZE
+)
+
+trainer = pl.Trainer(
+    max_epochs=EPOCHS, deterministic=True,
+    log_every_n_steps=4,
+    callbacks=[
+        LearningRateMonitor(logging_interval='epoch')
+    ]
 )
 
 # TODO: A bit hacky, but if we defined a LOAD_FROM, we load from that
@@ -104,7 +115,6 @@ else:
             lr=LR,
             weight_decay=1e-4,
             amsgrad=True,
-
         )
     )
     trainer.fit(m, datamodule=dm)
@@ -112,6 +122,7 @@ else:
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 from seaborn import heatmap
+
 preds = trainer.predict(m, dataloaders=dm.val_dataloader())
 preds = torch.concat(preds, dim=0)
 
@@ -128,4 +139,4 @@ plt.tight_layout(pad=3)
 plt.title('Confusion Matrix')
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
-plt.savefig('confusion_matrix.png')
+plt.savefig('confusion_matrix2.png')
