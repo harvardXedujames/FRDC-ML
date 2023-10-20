@@ -7,8 +7,11 @@ the 20210510 dataset.
 import lightning as pl
 import numpy as np
 import torch
-from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, \
-    EarlyStopping
+from lightning.pytorch.callbacks import (
+    LearningRateMonitor,
+    ModelCheckpoint,
+    EarlyStopping,
+)
 from torch.utils.data import TensorDataset, Dataset, Subset
 
 from frdc.models import FaceNet
@@ -24,18 +27,15 @@ def train_val_test_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
     #  segments_1. Will need to refactor this.
     return [
         Subset(x, list(range(len(segments_0)))),
-        Subset(x, list(
-            range(len(segments_0), len(segments_0) + len(segments_1)))),
-        []
+        Subset(x, list(range(len(segments_0), len(segments_0) + len(segments_1)))),
+        [],
     ]
 
 
 # Prepare the dataset
-segments_0, labels_0 = get_dataset(
-    'chestnut_nature_park', '20201218', None
-)
+segments_0, labels_0 = get_dataset("chestnut_nature_park", "20201218", None)
 segments_1, labels_1 = get_dataset(
-    'chestnut_nature_park', '20210510', '90deg43m85pct255deg/map'
+    "chestnut_nature_park", "20210510", "90deg43m85pct255deg/map"
 )
 
 # Concatenate the datasets
@@ -70,12 +70,12 @@ trainer = pl.Trainer(
     log_every_n_steps=4,
     callbacks=[
         # Stop training if the validation loss doesn't improve for 4 epochs
-        EarlyStopping(monitor='val_loss', patience=4, mode='min'),
+        EarlyStopping(monitor="val_loss", patience=4, mode="min"),
         # Log the learning rate on TensorBoard
-        LearningRateMonitor(logging_interval='epoch'),
+        LearningRateMonitor(logging_interval="epoch"),
         # Save the best model
-        ModelCheckpoint(monitor='val_loss', mode='min', save_top_k=1)
-    ]
+        ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1),
+    ],
 )
 
 m = FRDCModule(
@@ -83,11 +83,10 @@ m = FRDCModule(
     # TODO: It's not really the FaceNet model, but a modified version of it.
     model_cls=FaceNet,
     model_kwargs=dict(n_out_classes=len(set(labels))),
-
     # We use the Adam optimizer
     optim_cls=torch.optim.Adam,
     # TODO: This is not fine-tuned.
-    optim_kwargs=dict(lr=LR, weight_decay=1e-4, amsgrad=True)
+    optim_kwargs=dict(lr=LR, weight_decay=1e-4, amsgrad=True),
 )
 
 trainer.fit(m, datamodule=dm)

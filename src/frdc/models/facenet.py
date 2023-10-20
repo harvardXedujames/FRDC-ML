@@ -10,7 +10,7 @@ class FaceNet(nn.Module):
     MIN_SIZE = 299
 
     def __init__(self, n_out_classes: int = 10):
-        """ Initialize the FaceNet model.
+        """Initialize the FaceNet model.
 
         Args:
             n_out_classes: The number of output classes
@@ -38,11 +38,11 @@ class FaceNet(nn.Module):
             nn.Linear(self.INCEPTION_OUT_DIMS, self.INCEPTION_OUT_DIMS // 2),
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS // 2),
             nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_out_classes),
-            nn.Softmax(dim=1)
+            nn.Softmax(dim=1),
         )
 
     def forward(self, x: torch.Tensor):
-        """ Forward pass.
+        """Forward pass.
 
         Notes:
             - Min input size: 299 x 299.
@@ -53,14 +53,14 @@ class FaceNet(nn.Module):
         """
 
         if (
-                any(s == 1 for s in x.shape) or
-                x.shape[2] < self.MIN_SIZE or
-                x.shape[3] < self.MIN_SIZE
+            any(s == 1 for s in x.shape)
+            or x.shape[2] < self.MIN_SIZE
+            or x.shape[3] < self.MIN_SIZE
         ):
             raise RuntimeError(
-                f'Input shape {x.shape} must adhere to the following:\n'
-                f' - No singleton dimensions\n'
-                f' - Size >= {self.MIN_SIZE}\n'
+                f"Input shape {x.shape} must adhere to the following:\n"
+                f" - No singleton dimensions\n"
+                f" - Size >= {self.MIN_SIZE}\n"
             )
         # x = self.feature_extraction(x)
 

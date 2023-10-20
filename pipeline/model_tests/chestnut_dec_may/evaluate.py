@@ -13,18 +13,14 @@ from pipeline.model_tests.chestnut_dec_may.utils import get_dataset
 # Get our Test
 # TODO: Ideally, we should have a separate dataset for testing.
 segments, labels = get_dataset(
-    'chestnut_nature_park', '20210510', '90deg43m85pct255deg/map'
+    "chestnut_nature_park", "20210510", "90deg43m85pct255deg/map"
 )
 
 # Prepare the datamodule and trainer
-dm = FRDCDataModule(
-    segments=segments,
-    preprocess=preprocess,
-    batch_size=5
-)
+dm = FRDCDataModule(segments=segments, preprocess=preprocess, batch_size=5)
 
 # TODO: Hacky way to load our LabelEncoder
-dm.le.classes_ = np.load('le.npy', allow_pickle=True)
+dm.le.classes_ = np.load("le.npy", allow_pickle=True)
 
 # Load the model
 m = FRDCModule.load_from_checkpoint(
@@ -43,14 +39,11 @@ cm = confusion_matrix(y_true, y_pred)
 plt.figure(figsize=(10, 10))
 
 heatmap(
-    cm, annot=True,
-    xticklabels=dm.le.classes_,
-    yticklabels=dm.le.classes_,
-    cbar=False
+    cm, annot=True, xticklabels=dm.le.classes_, yticklabels=dm.le.classes_, cbar=False
 )
 
 plt.tight_layout(pad=3)
-plt.title('Confusion Matrix')
-plt.xlabel('Predicted Label')
-plt.ylabel('True Label')
-plt.savefig('confusion_matrix.png')
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.savefig("confusion_matrix.png")

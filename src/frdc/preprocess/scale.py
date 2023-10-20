@@ -7,9 +7,8 @@ import numpy as np
 from frdc.conf import BAND_MAX_CONFIG
 
 
-def _fn_per_band(ar: np.ndarray,
-                 fn: Callable[[np.ndarray], np.ndarray]):
-    """ Runs an operation for each band in an NDArray. """
+def _fn_per_band(ar: np.ndarray, fn: Callable[[np.ndarray], np.ndarray]):
+    """Runs an operation for each band in an NDArray."""
     ar = ar.copy()
     ar_bands = []
     for band in range(ar.shape[-1]):
@@ -20,9 +19,8 @@ def _fn_per_band(ar: np.ndarray,
     return np.stack(ar_bands, axis=-1)
 
 
-def scale_0_1_per_band(ar: np.ndarray,
-                       epsilon: float | bool = False) -> np.ndarray:
-    """ Scales an NDArray from 0 to 1 for each band independently
+def scale_0_1_per_band(ar: np.ndarray, epsilon: float | bool = False) -> np.ndarray:
+    """Scales an NDArray from 0 to 1 for each band independently
 
     Args:
         ar: NDArray of shape (H, W, C), where C is the number of bands.
@@ -33,29 +31,26 @@ def scale_0_1_per_band(ar: np.ndarray,
     epsilon = 1e-7 if epsilon is True else epsilon
 
     return _fn_per_band(
-        ar, lambda x: (x - np.nanmin(x)) /
-                      (np.nanmax(x) - np.nanmin(x) + epsilon)
+        ar, lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x) + epsilon)
     )
 
 
 def scale_normal_per_band(ar: np.ndarray) -> np.ndarray:
-    """ Scales an NDArray to zero mean and unit variance for each band
+    """Scales an NDArray to zero mean and unit variance for each band
         independently
 
     Args:
         ar: NDArray of shape (H, W, C), where C is the number of bands.
     """
-    return _fn_per_band(
-        ar, lambda x: (x - np.nanmean(x)) / np.nanstd(x)
-    )
+    return _fn_per_band(ar, lambda x: (x - np.nanmean(x)) / np.nanstd(x))
 
 
 def scale_static_per_band(
-        ar: np.ndarray,
-        order: list[str],
-        bounds_config: dict[str, tuple[int, int]] = BAND_MAX_CONFIG
+    ar: np.ndarray,
+    order: list[str],
+    bounds_config: dict[str, tuple[int, int]] = BAND_MAX_CONFIG,
 ) -> np.ndarray:
-    """ This scales statically per band, using the bounds_config.
+    """This scales statically per band, using the bounds_config.
 
     Args:
         ar: NDArray of shape (H, W, C), where C is the number of bands.

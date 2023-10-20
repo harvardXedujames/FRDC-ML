@@ -14,8 +14,12 @@ from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 
-from frdc.conf import LOCAL_DATASET_ROOT_DIR, GCS_PROJECT_ID, \
-    GCS_BUCKET_NAME, BAND_CONFIG
+from frdc.conf import (
+    LOCAL_DATASET_ROOT_DIR,
+    GCS_PROJECT_ID,
+    GCS_BUCKET_NAME,
+    BAND_CONFIG,
+)
 from frdc.utils import Rect
 
 
@@ -28,16 +32,15 @@ class FRDCDownloader:
     bucket: storage.Bucket = field(init=False)
 
     def __post_init__(self):
-        """ Initializes the GCS bucket. """
+        """Initializes the GCS bucket."""
         # If credentials is None, then use the default credentials.
         # Default credentials are set by the environment variable
         # GOOGLE_APPLICATION_CREDENTIALS, see ADC documentation:
-        client = storage.Client(project=self.project_id,
-                                credentials=self.credentials)
+        client = storage.Client(project=self.project_id, credentials=self.credentials)
         self.bucket = client.bucket(self.bucket_name)
 
-    def list_gcs_datasets(self, anchor='result_Red.tif') -> pd.DataFrame:
-        """ Lists all datasets from Google Cloud Storage.
+    def list_gcs_datasets(self, anchor="result_Red.tif") -> pd.DataFrame:
+        """Lists all datasets from Google Cloud Storage.
 
         Args:
             anchor: The anchor file to find the dataset.
@@ -55,8 +58,12 @@ class FRDCDownloader:
         df = (
             # The list of all blobs in the bucket that contains the anchor file
             # E.g. "chestnut_nature_park/20201218/183deg/result_Red.tif"
-            pd.Series([blob.name for blob in
-                       self.bucket.list_blobs(match_glob=f"**/{anchor}")])
+            pd.Series(
+                [
+                    blob.name
+                    for blob in self.bucket.list_blobs(match_glob=f"**/{anchor}")
+                ]
+            )
             # Remove the anchor file name
             # E.g. "chestnut_nature_park/20201218/183deg"
             .str.replace(f"/{anchor}", "")
@@ -66,9 +73,10 @@ class FRDCDownloader:
 
         return df
 
-    def download_file(self, *, path_glob: Path | str,
-                      local_exists_ok: bool = True) -> Path:
-        """ Downloads a file from Google Cloud Storage. If the file already
+    def download_file(
+        self, *, path_glob: Path | str, local_exists_ok: bool = True
+    ) -> Path:
+        """Downloads a file from Google Cloud Storage. If the file already
             exists locally, and the hashes match, it will not download the file
 
         Args:
@@ -96,12 +104,10 @@ class FRDCDownloader:
         """
 
         # Check if there are multiple blobs that match the path_glob
-        gcs_blobs = list(
-            self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
+        gcs_blobs = list(self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
 
         if len(gcs_blobs) > 1:
-            raise ValueError(
-                f"Multiple blobs found for {path_glob}: {gcs_blobs}")
+            raise ValueError(f"Multiple blobs found for {path_glob}: {gcs_blobs}")
         elif len(gcs_blobs) == 0:
             raise FileNotFoundError(f"No blobs found for {path_glob}")
 
@@ -113,7 +119,7 @@ class FRDCDownloader:
         if local_path.exists():
             gcs_blob.reload()  # Necessary to get the md5_hash
             gcs_hash = base64.b64decode(gcs_blob.md5_hash).hex()
-            local_hash = hashlib.md5(open(local_path, 'rb').read()).hexdigest()
+            local_hash = hashlib.md5(open(local_path, "rb").read()).hexdigest()
             logging.debug(f"Local hash: {local_hash}, GCS hash: {gcs_hash}")
             if gcs_hash == local_hash:
                 if local_exists_ok:
@@ -121,7 +127,8 @@ class FRDCDownloader:
                     return local_path
                 else:
                     raise FileExistsError(
-                        f"{local_path} already exists and hashes match.")
+                        f"{local_path} already exists and hashes match."
+                    )
 
         # Else, download
         logging.info(f"Downloading {gcs_blob.name} to {local_path}...")
@@ -139,24 +146,24 @@ class FRDCDataset:
 
     @staticmethod
     def _load_debug_dataset() -> FRDCDataset:
-        """ Loads a debug dataset from Google Cloud Storage.
+        """Loads a debug dataset from Google Cloud Storage.
 
         Returns:
             A dictionary of the dataset, with keys as the filenames and values
             as the images.
         """
-        return FRDCDataset(site='DEBUG', date='0', version=None)
+        return FRDCDataset(site="DEBUG", date="0", version=None)
 
     @property
     def dataset_dir(self):
         return Path(
-            f"{self.site}/{self.date}/"
-            f"{self.version + '/' if self.version else ''}"
+            f"{self.site}/{self.date}/" f"{self.version + '/' if self.version else ''}"
         )
 
-    def get_ar_bands_as_dict(self, bands: Iterable[str] = BAND_CONFIG.keys()
-                             ) -> dict[str, np.ndarray]:
-        """ Gets the bands from the dataset as a dictionary of (name, image)
+    def get_ar_bands_as_dict(
+        self, bands: Iterable[str] = BAND_CONFIG.keys()
+    ) -> dict[str, np.ndarray]:
+        """Gets the bands from the dataset as a dictionary of (name, image)
 
         Notes:
             Use get_ar_bands to get the bands as a concatenated numpy array.
@@ -202,9 +209,11 @@ class FRDCDataset:
 
         return d
 
-    def get_ar_bands(self, bands: Iterable[str] = BAND_CONFIG.keys(),
-                     ) -> tuple[np.ndarray, list[str]]:
-        """ Gets the bands as a numpy array, and the band order as a list.
+    def get_ar_bands(
+        self,
+        bands: Iterable[str] = BAND_CONFIG.keys(),
+    ) -> tuple[np.ndarray, list[str]]:
+        """Gets the bands as a numpy array, and the band order as a list.
 
         Notes:
             This is a wrapper around get_bands, concatenating the bands.
@@ -228,9 +237,10 @@ class FRDCDataset:
         d: dict[str, np.ndarray] = self.get_ar_bands_as_dict(bands)
         return np.concatenate(list(d.values()), axis=-1), list(d.keys())
 
-    def get_bounds_and_labels(self, file_name='bounds.csv'
-                              ) -> tuple[list[Rect], list[str]]:
-        """ Gets the bounds and labels from the bounds.csv file.
+    def get_bounds_and_labels(
+        self, file_name="bounds.csv"
+    ) -> tuple[list[Rect], list[str]]:
+        """Gets the bounds and labels from the bounds.csv file.
 
         Notes:
             In the context of np.ndarray, to slice with x, y coordinates,
@@ -246,12 +256,14 @@ class FRDCDataset:
         """
         fp = self.dl.download_file(path_glob=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
-        return ([Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
-                df['name'].tolist())
+        return (
+            [Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
+            df["name"].tolist(),
+        )
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
-        """ Loads an Image from a path into a 3D numpy array. (H, W, C)
+        """Loads an Image from a path into a 3D numpy array. (H, W, C)
 
         Notes:
             If the image has only 1 channel, then it will be (H, W, 1) instead

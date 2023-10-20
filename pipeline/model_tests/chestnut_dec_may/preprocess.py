@@ -11,6 +11,7 @@ from frdc.preprocess.scale import scale_normal_per_band, scale_0_1_per_band
 # TODO: Eventually, we will have multiple tests, and we should try to make
 #   this function test agnostic.
 
+
 def channel_preprocess(ar: np.ndarray) -> np.ndarray:
     # Preprocesses a channel array of shape: (H, W)
     shape = ar.shape
@@ -24,8 +25,7 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     # Add a small epsilon to avoid upper bound of 1.0
     ar = scale_0_1_per_band(ar, epsilon=0.001)
     ar = append_glcm_padded_cached(
-        ar, step_size=7, bin_from=1, bin_to=128, radius=3,
-        features=(Features.MEAN,)
+        ar, step_size=7, bin_from=1, bin_to=128, radius=3, features=(Features.MEAN,)
     )
     # We can then scale normal for better neural network convergence
     ar = scale_normal_per_band(ar)
@@ -41,7 +41,7 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
 
 
 def preprocess(l_ar: list[np.ndarray]) -> torch.Tensor:
-    """ Preprocesses a list of segments.
+    """Preprocesses a list of segments.
 
     Notes:
         We structure the transformations into 3 levels.

@@ -9,9 +9,9 @@ def test_download_file_exist_ok(dl, debug_file_path):
 
 
 def test_download_multiple_files(dl):
-    """ Test that download_file shouldn't support multiple files. """
+    """Test that download_file shouldn't support multiple files."""
     with pytest.raises(ValueError):
-        dl.download_file(path_glob='**/*.tif')
+        dl.download_file(path_glob="**/*.tif")
 
 
 def test_list_datasets(dl):

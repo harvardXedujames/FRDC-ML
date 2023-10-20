@@ -9,16 +9,16 @@ from skimage.segmentation import watershed
 
 
 def compute_labels(
-        ar: np.ndarray,
-        nir_band_ix: int = -1,
-        nir_threshold_value=90 / 256,
-        min_crown_size=1000,
-        min_crown_hole=1000,
-        connectivity=2,
-        peaks_footprint=200,
-        watershed_compactness=0
+    ar: np.ndarray,
+    nir_band_ix: int = -1,
+    nir_threshold_value=90 / 256,
+    min_crown_size=1000,
+    min_crown_hole=1000,
+    connectivity=2,
+    peaks_footprint=200,
+    watershed_compactness=0,
 ) -> np.ndarray:
-    """ Automatically segments crowns from an NDArray with a series of image
+    """Automatically segments crowns from an NDArray with a series of image
         processing operations.
 
     Args:
@@ -42,25 +42,27 @@ def compute_labels(
         "This function is to be deprecated. use functions separately instead "
         "for more control over the parameters. This function assumes the NIR "
         "band is the last band.",
-        DeprecationWarning
+        DeprecationWarning,
     )
 
     from frdc.preprocess.scale import scale_0_1_per_band
+
     ar = scale_0_1_per_band(ar)
     ar_mask = threshold_binary_mask(ar, nir_band_ix, nir_threshold_value)
-    ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size,
-                                   connectivity=connectivity)
-    ar_mask = remove_small_holes(ar_mask, area_threshold=min_crown_hole,
-                                 connectivity=connectivity)
-    ar_labels = binary_watershed(ar_mask, peaks_footprint,
-                                 watershed_compactness)
+    ar_mask = remove_small_objects(
+        ar_mask, min_size=min_crown_size, connectivity=connectivity
+    )
+    ar_mask = remove_small_holes(
+        ar_mask, area_threshold=min_crown_hole, connectivity=connectivity
+    )
+    ar_labels = binary_watershed(ar_mask, peaks_footprint, watershed_compactness)
     return ar_labels
 
 
-def threshold_binary_mask(ar: np.ndarray,
-                          band_ix: int,
-                          threshold_value: float = 90 / 256) -> np.ndarray:
-    """ Creates a binary mask array from an NDArray by thresholding a band.
+def threshold_binary_mask(
+    ar: np.ndarray, band_ix: int, threshold_value: float = 90 / 256
+) -> np.ndarray:
+    """Creates a binary mask array from an NDArray by thresholding a band.
 
     Notes:
          For the band argument, use Band.NIR for the NIR band,
@@ -73,19 +75,19 @@ def threshold_binary_mask(ar: np.ndarray,
     return ar[:, :, band_ix] > threshold_value
 
 
-def binary_watershed(ar_mask: np.ndarray,
-                     peaks_footprint: int = 200,
-                     watershed_compactness: float = 0) -> np.ndarray:
-    """ Watershed segmentation of a binary mask.
-    
+def binary_watershed(
+    ar_mask: np.ndarray, peaks_footprint: int = 200, watershed_compactness: float = 0
+) -> np.ndarray:
+    """Watershed segmentation of a binary mask.
+
     Notes:
         This function is used internally by `segment_crowns`.
-        
+
     Args:
         ar_mask: Binary mask array of shape (H, W).
         peaks_footprint: Footprint for peak_local_max.
         watershed_compactness: Compactness for watershed.
-        
+
     Returns:
         A watershed segmentation of the binary mask.
     """
@@ -106,7 +108,7 @@ def binary_watershed(ar_mask: np.ndarray,
         # min_distance=1,
         exclude_border=0,
         # p_norm=2,
-        labels=ar_mask
+        labels=ar_mask,
     )
     ar_watershed_basins = np.zeros(ar_distance.shape, dtype=bool)
     ar_watershed_basins[tuple(ar_watershed_basin_coords.T)] = True
@@ -115,11 +117,12 @@ def binary_watershed(ar_mask: np.ndarray,
     # TODO: I noticed that low watershed compactness values produces miniblobs,
     #  which can be indicative of redundant crowns.
     #  We should investigate this further.
-    return watershed(image=-ar_distance,
-                     # We use the negative so that "peaks" become "troughs"
-                     markers=ar_watershed_basins,
-                     mask=ar_mask,
-                     # Enable this to see the watershed lines
-                     # watershed_line=True,
-                     compactness=watershed_compactness
-                     )
+    return watershed(
+        image=-ar_distance,
+        # We use the negative so that "peaks" become "troughs"
+        markers=ar_watershed_basins,
+        mask=ar_mask,
+        # Enable this to see the watershed lines
+        # watershed_line=True,
+        compactness=watershed_compactness,
+    )

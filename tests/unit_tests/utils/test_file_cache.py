@@ -8,7 +8,7 @@ from frdc.utils.file_cache import file_cache
 
 @pytest.mark.cupy
 def test_caching():
-    """ This test ensures that the file_cache decorator works as expected.
+    """This test ensures that the file_cache decorator works as expected.
 
     1) It should cache the result of the function call.
     2) It should not call the function again if the result is cached.
@@ -16,7 +16,7 @@ def test_caching():
 
     """
     # Prepare the cache directory
-    cache_dir = Path(__file__).parent / 'cache'
+    cache_dir = Path(__file__).parent / "cache"
     cache_dir.mkdir(exist_ok=True, parents=True)
     for f in cache_dir.glob("*.npy"):
         f.unlink()

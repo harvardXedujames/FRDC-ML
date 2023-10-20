@@ -7,11 +7,9 @@ from frdc.utils import Rect
 
 
 def remove_small_segments_from_labels(
-        ar_labels: np.ndarray,
-        min_height: int = 10,
-        min_width: int = 10
+    ar_labels: np.ndarray, min_height: int = 10, min_width: int = 10
 ) -> np.ndarray:
-    """ Removes small segments from a label image.
+    """Removes small segments from a label image.
 
     Args:
         ar_labels: Labelled Image, where each integer value is a segment mask.
@@ -35,11 +33,9 @@ def remove_small_segments_from_labels(
 
 
 def extract_segments_from_labels(
-        ar: np.ndarray,
-        ar_labels: np.ndarray,
-        cropped: bool = True
+    ar: np.ndarray, ar_labels: np.ndarray, cropped: bool = True
 ) -> list[np.ndarray]:
-    """ Extracts segments as a list from a label image.
+    """Extracts segments as a list from a label image.
 
     Args:
         ar: The source image to extract segments from.
@@ -58,8 +54,9 @@ def extract_segments_from_labels(
             x1, y1 = coords.max(axis=0) + 1
             ar_segment_cropped_mask = ar_labels[x0:x1, y0:y1] == segment_ix
             ar_segment_cropped = ar[x0:x1, y0:y1]
-            ar_segment_cropped = np.where(ar_segment_cropped_mask[..., None],
-                                          ar_segment_cropped, np.nan)
+            ar_segment_cropped = np.where(
+                ar_segment_cropped_mask[..., None], ar_segment_cropped, np.nan
+            )
             ar_segments.append(ar_segment_cropped)
         else:
             ar_segment_mask = np.array(ar_labels == segment_ix)
@@ -69,11 +66,9 @@ def extract_segments_from_labels(
 
 
 def extract_segments_from_bounds(
-        ar: np.ndarray,
-        bounds: Iterable[Rect],
-        cropped: bool = True
+    ar: np.ndarray, bounds: Iterable[Rect], cropped: bool = True
 ) -> list[np.ndarray]:
-    """ Extracts segments as a list from bounds
+    """Extracts segments as a list from bounds
 
     Args:
         ar: The source image to extract segments from.

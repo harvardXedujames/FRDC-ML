@@ -6,12 +6,12 @@ import xxhash
 
 
 def file_cache(
-        fn_cache_fp: Callable[[str], Path],
-        fn_load_object: Callable[[Path], object] = np.load,
-        fn_save_object: Callable[[Path, object], None] = np.save,
-        fn_make_hashable: Callable[[object], Hashable] = str,
+    fn_cache_fp: Callable[[str], Path],
+    fn_load_object: Callable[[Path], object] = np.load,
+    fn_save_object: Callable[[Path, object], None] = np.save,
+    fn_make_hashable: Callable[[object], Hashable] = str,
 ):
-    """ A decorator that caches the output of a function to a file
+    """A decorator that caches the output of a function to a file
 
     Notes:
         This caching function uses xxhash.xxh32 to hash.
@@ -61,5 +61,7 @@ def file_cache(
                 out = fn(*args, **kwargs)
                 fn_save_object(cache_fp, out)
                 return out
+
         return inner
+
     return decorator

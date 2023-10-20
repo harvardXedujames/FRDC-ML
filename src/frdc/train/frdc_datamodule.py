@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset, Dataset
 
 @dataclass  # (kw_only=True) # only available when we use Py3.10
 class FRDCDataModule(LightningDataModule):
-    """ FRDC Data Module.
+    """FRDC Data Module.
 
     Notes:
         We separate the segment input and transform as we expect the input
@@ -59,15 +59,14 @@ class FRDCDataModule(LightningDataModule):
         >>> fn_split=lambda x: random_split(x, lengths=[len(x) - 6, 3, 3])
 
     """
+
     segments: list[np.ndarray]
     preprocess: Callable[[list[np.ndarray]], torch.Tensor]
     augmentation: Callable[[torch.Tensor], torch.Tensor] = lambda x: x
     labels: list[str] | None = None
     train_val_test_split: (
-            Callable[
-                [TensorDataset],
-                Collection[Dataset, Dataset, Dataset]
-            ] | None) = None,
+        Callable[[TensorDataset], Collection[Dataset, Dataset, Dataset]] | None
+    ) = (None,)
     batch_size: int = 4
     le: LabelEncoder = LabelEncoder()
 
@@ -82,28 +81,28 @@ class FRDCDataModule(LightningDataModule):
     def setup(self, stage=None):
         x = self.preprocess(self.segments)
 
-        assert torch.isnan(x).sum() == 0, \
-            "Found NaN values in the segments."
-        assert x.ndim == 4, \
-            (f"Expected 4 dimensions, got {x.ndim} dimensions of shape"
-             f" {x.shape}.")
+        assert torch.isnan(x).sum() == 0, "Found NaN values in the segments."
+        assert x.ndim == 4, (
+            f"Expected 4 dimensions, got {x.ndim} dimensions of shape" f" {x.shape}."
+        )
 
-        if stage in ['fit', 'validate', 'test']:
+        if stage in ["fit", "validate", "test"]:
             if self.labels is None or self.train_val_test_split is None:
-                raise ValueError("Labels and fn_split must be provided for"
-                                 " train, val, test datasets.")
+                raise ValueError(
+                    "Labels and fn_split must be provided for"
+                    " train, val, test datasets."
+                )
 
             y = torch.from_numpy(self.le.fit_transform(self.labels))
-            assert x.shape[0] == y.shape[0], \
-                (f"Expected same number of samples for x and y, got"
-                 f" {x.shape[0]} for x and {y.shape[0]} for y.")
-
-            tds = TensorDataset(x, y)
-            self.train_ds, self.val_ds, self.test_ds = (
-                self.train_val_test_split(tds)
+            assert x.shape[0] == y.shape[0], (
+                f"Expected same number of samples for x and y, got"
+                f" {x.shape[0]} for x and {y.shape[0]} for y."
             )
 
-        elif stage == 'predict':
+            tds = TensorDataset(x, y)
+            self.train_ds, self.val_ds, self.test_ds = self.train_val_test_split(tds)
+
+        elif stage == "predict":
             tds = TensorDataset(x)
             self.predict_ds = tds
 
@@ -115,17 +114,13 @@ class FRDCDataModule(LightningDataModule):
         return batch
 
     def train_dataloader(self):
-        return DataLoader(self.train_ds, batch_size=self.batch_size,
-                          shuffle=True)
+        return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_ds, batch_size=self.batch_size,
-                          shuffle=False)
+        return DataLoader(self.val_ds, batch_size=self.batch_size, shuffle=False)
 
     def test_dataloader(self):
-        return DataLoader(self.test_ds, batch_size=self.batch_size,
-                          shuffle=False)
+        return DataLoader(self.test_ds, batch_size=self.batch_size, shuffle=False)
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, batch_size=self.batch_size,
-                          shuffle=False)
+        return DataLoader(self.predict_ds, batch_size=self.batch_size, shuffle=False)

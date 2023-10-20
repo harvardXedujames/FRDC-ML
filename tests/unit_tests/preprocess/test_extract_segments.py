@@ -18,13 +18,13 @@ import numpy as np
 from frdc.preprocess.extract_segments import (
     remove_small_segments_from_labels,
     extract_segments_from_bounds,
-    extract_segments_from_labels
+    extract_segments_from_labels,
 )
 from utils import get_labels
 
 
 def test_remove_small_segments_from_labels():
-    """ We'll test that it correctly removes the correct segments.
+    """We'll test that it correctly removes the correct segments.
 
     The test case:
         1 1 2 2 2
@@ -50,13 +50,20 @@ def test_remove_small_segments_from_labels():
     ar[2:5, 0:2] = 3
     ar[2:5, 2:5] = 4
 
-    def test_unique_labels(expected_labels: set, min_height: int = 2,
-                           min_width: int = 2):
-        """ Tests the unique labels are as expected. """
-        assert set(np.unique(
-            remove_small_segments_from_labels(ar, min_height=min_height,
-                                              min_width=min_width)
-        )) == expected_labels
+    def test_unique_labels(
+        expected_labels: set, min_height: int = 2, min_width: int = 2
+    ):
+        """Tests the unique labels are as expected."""
+        assert (
+            set(
+                np.unique(
+                    remove_small_segments_from_labels(
+                        ar, min_height=min_height, min_width=min_width
+                    )
+                )
+            )
+            == expected_labels
+        )
 
     # 0 represents "removed" labels are relabelled to the background 0.
     test_unique_labels({1, 2, 3, 4}, min_height=2, min_width=2)
@@ -91,7 +98,7 @@ def test_extract_segments_from_labels_no_crop(ar, order):
 
 
 def test_extract_segments():
-    """ Test our segment extraction function.
+    """Test our segment extraction function.
 
     To do this, we have a source array and a label array.
     Our function will loop through each unique label in the label array,
@@ -105,25 +112,26 @@ def test_extract_segments():
         [[[nan],[nan]],[[nan],[40]]],
     ]
     """
-    ar_source = np.array(
-        [[[10], [20]],
-         [[30], [40]]]
-    )
-    ar_label = np.array(
-        [[0, 1],
-         [2, 3]]
-    )
-    ar_segments = extract_segments_from_labels(ar_source, ar_label,
-                                               cropped=False)
-    assert np.isclose(ar_segments[0],
-                      np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]),
-                      equal_nan=True).all()
-    assert np.isclose(ar_segments[1],
-                      np.array([[[np.nan], [20]], [[np.nan], [np.nan]]]),
-                      equal_nan=True).all()
-    assert np.isclose(ar_segments[2],
-                      np.array([[[np.nan], [np.nan]], [[30], [np.nan]]]),
-                      equal_nan=True).all()
-    assert np.isclose(ar_segments[3],
-                      np.array([[[np.nan], [np.nan]], [[np.nan], [40]]]),
-                      equal_nan=True).all()
+    ar_source = np.array([[[10], [20]], [[30], [40]]])
+    ar_label = np.array([[0, 1], [2, 3]])
+    ar_segments = extract_segments_from_labels(ar_source, ar_label, cropped=False)
+    assert np.isclose(
+        ar_segments[0],
+        np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[1],
+        np.array([[[np.nan], [20]], [[np.nan], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[2],
+        np.array([[[np.nan], [np.nan]], [[30], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[3],
+        np.array([[[np.nan], [np.nan]], [[np.nan], [40]]]),
+        equal_nan=True,
+    ).all()

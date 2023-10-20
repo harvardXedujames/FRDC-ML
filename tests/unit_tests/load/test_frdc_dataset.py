@@ -14,9 +14,9 @@ def test_get_ar_bands(ds):
 
 
 def test_get_ar_bands_ordering(ds):
-    ar, order = ds.get_ar_bands(['WB', 'WG'])
+    ar, order = ds.get_ar_bands(["WB", "WG"])
     assert ar.shape[-1] == 2
-    assert order == ['WB', 'WG']
+    assert order == ["WB", "WG"]
 
 
 def test_get_bounds(ds):
