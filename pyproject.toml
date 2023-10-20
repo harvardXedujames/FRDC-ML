@@ -50,3 +50,6 @@ testpaths = [
     "tests/unit_tests",
     "tests/integration_tests",
 ]
+
+[tool.black]
+line-length = 79
