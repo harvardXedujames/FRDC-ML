@@ -4,9 +4,8 @@ from glcm_cupy import Features
 from torchvision.transforms.v2 import Resize
 
 from frdc.models import FaceNet
-from frdc.preprocess import scale_0_1_per_band
 from frdc.preprocess.glcm_padded import append_glcm_padded_cached
-from frdc.preprocess.scale import scale_normal_per_band
+from frdc.preprocess.scale import scale_normal_per_band, scale_0_1_per_band
 
 
 # TODO: Eventually, we will have multiple tests, and we should try to make
@@ -22,13 +21,12 @@ def channel_preprocess(ar: np.ndarray) -> np.ndarray:
 def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     # Preprocesses a segment array of shape: (H, W, C)
 
-    # We divide by 1.001 is make the range [0, 1) instead of [0, 1] so that
-    # glcm_padded can work properly.
-    ar = scale_0_1_per_band(ar) / 1.001
-    # We scale 0 1 before GLCM so that binning works
-    ar = append_glcm_padded_cached(ar,
-                                   step_size=7, bin_from=1, bin_to=128,
-                                   radius=3, features=(Features.MEAN,))
+    # Add a small epsilon to avoid upper bound of 1.0
+    ar = scale_0_1_per_band(ar, epsilon=0.001)
+    ar = append_glcm_padded_cached(
+        ar, step_size=7, bin_from=1, bin_to=128, radius=3,
+        features=(Features.MEAN,)
+    )
     # We can then scale normal for better neural network convergence
     ar = scale_normal_per_band(ar)
 
