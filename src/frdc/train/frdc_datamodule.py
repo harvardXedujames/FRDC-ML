@@ -83,7 +83,8 @@ class FRDCDataModule(LightningDataModule):
 
         assert torch.isnan(x).sum() == 0, "Found NaN values in the segments."
         assert x.ndim == 4, (
-            f"Expected 4 dimensions, got {x.ndim} dimensions of shape" f" {x.shape}."
+            f"Expected 4 dimensions, got {x.ndim} dimensions of shape"
+            f" {x.shape}."
         )
 
         if stage in ["fit", "validate", "test"]:
@@ -100,7 +101,11 @@ class FRDCDataModule(LightningDataModule):
             )
 
             tds = TensorDataset(x, y)
-            self.train_ds, self.val_ds, self.test_ds = self.train_val_test_split(tds)
+            (
+                self.train_ds,
+                self.val_ds,
+                self.test_ds,
+            ) = self.train_val_test_split(tds)
 
         elif stage == "predict":
             tds = TensorDataset(x)
@@ -114,13 +119,21 @@ class FRDCDataModule(LightningDataModule):
         return batch
 
     def train_dataloader(self):
-        return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(
+            self.train_ds, batch_size=self.batch_size, shuffle=True
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_ds, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(
+            self.val_ds, batch_size=self.batch_size, shuffle=False
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test_ds, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(
+            self.test_ds, batch_size=self.batch_size, shuffle=False
+        )
 
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(
+            self.predict_ds, batch_size=self.batch_size, shuffle=False
+        )

@@ -12,7 +12,9 @@ def test_scale_0_1_per_band():
      respectively.
     Thus, there should be exactly 5 zeros and 5 ones in the scaled array.
     """
-    scaled = scale_0_1_per_band(np.random.random(100 * 100 * 5).reshape((100, 100, 5)))
+    scaled = scale_0_1_per_band(
+        np.random.random(100 * 100 * 5).reshape((100, 100, 5))
+    )
     assert scaled.shape == (100, 100, 5)
     assert np.sum(scaled == 0) == 5
     assert np.sum(scaled == 1) == 5

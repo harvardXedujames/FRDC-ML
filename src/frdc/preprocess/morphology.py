@@ -35,7 +35,7 @@ def compute_labels(
         A tuple of (background, crowns), background is the background image and
         crowns is a list of np.ndarray crowns.
         Background is of shape (H, W, C), where C is the number of bands
-        Crowns is a list of np.ndarray crowns, each crown is of shape (H, W, C).
+        Crowns is a list[np.ndarray] crowns, each of shape (H, W, C).
     """
     # Raise deprecation worning
     warnings.warn(
@@ -55,7 +55,9 @@ def compute_labels(
     ar_mask = remove_small_holes(
         ar_mask, area_threshold=min_crown_hole, connectivity=connectivity
     )
-    ar_labels = binary_watershed(ar_mask, peaks_footprint, watershed_compactness)
+    ar_labels = binary_watershed(
+        ar_mask, peaks_footprint, watershed_compactness
+    )
     return ar_labels
 
 
@@ -76,7 +78,9 @@ def threshold_binary_mask(
 
 
 def binary_watershed(
-    ar_mask: np.ndarray, peaks_footprint: int = 200, watershed_compactness: float = 0
+    ar_mask: np.ndarray,
+    peaks_footprint: int = 200,
+    watershed_compactness: float = 0,
 ) -> np.ndarray:
     """Watershed segmentation of a binary mask.
 

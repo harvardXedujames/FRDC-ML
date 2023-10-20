@@ -25,7 +25,12 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     # Add a small epsilon to avoid upper bound of 1.0
     ar = scale_0_1_per_band(ar, epsilon=0.001)
     ar = append_glcm_padded_cached(
-        ar, step_size=7, bin_from=1, bin_to=128, radius=3, features=(Features.MEAN,)
+        ar,
+        step_size=7,
+        bin_from=1,
+        bin_to=128,
+        radius=3,
+        features=(Features.MEAN,),
     )
     # We can then scale normal for better neural network convergence
     ar = scale_normal_per_band(ar)

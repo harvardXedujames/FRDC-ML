@@ -19,7 +19,9 @@ def _fn_per_band(ar: np.ndarray, fn: Callable[[np.ndarray], np.ndarray]):
     return np.stack(ar_bands, axis=-1)
 
 
-def scale_0_1_per_band(ar: np.ndarray, epsilon: float | bool = False) -> np.ndarray:
+def scale_0_1_per_band(
+    ar: np.ndarray, epsilon: float | bool = False
+) -> np.ndarray:
     """Scales an NDArray from 0 to 1 for each band independently
 
     Args:
@@ -31,7 +33,8 @@ def scale_0_1_per_band(ar: np.ndarray, epsilon: float | bool = False) -> np.ndar
     epsilon = 1e-7 if epsilon is True else epsilon
 
     return _fn_per_band(
-        ar, lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x) + epsilon)
+        ar,
+        lambda x: (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x) + epsilon),
     )
 
 

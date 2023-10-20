@@ -36,7 +36,9 @@ class FRDCDownloader:
         # If credentials is None, then use the default credentials.
         # Default credentials are set by the environment variable
         # GOOGLE_APPLICATION_CREDENTIALS, see ADC documentation:
-        client = storage.Client(project=self.project_id, credentials=self.credentials)
+        client = storage.Client(
+            project=self.project_id, credentials=self.credentials
+        )
         self.bucket = client.bucket(self.bucket_name)
 
     def list_gcs_datasets(self, anchor="result_Red.tif") -> pd.DataFrame:
@@ -61,7 +63,9 @@ class FRDCDownloader:
             pd.Series(
                 [
                     blob.name
-                    for blob in self.bucket.list_blobs(match_glob=f"**/{anchor}")
+                    for blob in self.bucket.list_blobs(
+                        match_glob=f"**/{anchor}"
+                    )
                 ]
             )
             # Remove the anchor file name
@@ -80,7 +84,8 @@ class FRDCDownloader:
             exists locally, and the hashes match, it will not download the file
 
         Args:
-            path_glob: Path Glob to the file in GCS. This must only match one file.
+            path_glob: Path Glob to the file in GCS. This must only match one
+                file.
             local_exists_ok: If True, will not raise an error if the file
                 already exists locally and the hashes match.
 
@@ -104,10 +109,14 @@ class FRDCDownloader:
         """
 
         # Check if there are multiple blobs that match the path_glob
-        gcs_blobs = list(self.bucket.list_blobs(match_glob=Path(path_glob).as_posix()))
+        gcs_blobs = list(
+            self.bucket.list_blobs(match_glob=Path(path_glob).as_posix())
+        )
 
         if len(gcs_blobs) > 1:
-            raise ValueError(f"Multiple blobs found for {path_glob}: {gcs_blobs}")
+            raise ValueError(
+                f"Multiple blobs found for {path_glob}: {gcs_blobs}"
+            )
         elif len(gcs_blobs) == 0:
             raise FileNotFoundError(f"No blobs found for {path_glob}")
 
@@ -157,7 +166,8 @@ class FRDCDataset:
     @property
     def dataset_dir(self):
         return Path(
-            f"{self.site}/{self.date}/" f"{self.version + '/' if self.version else ''}"
+            f"{self.site}/{self.date}/"
+            f"{self.version + '/' if self.version else ''}"
         )
 
     def get_ar_bands_as_dict(

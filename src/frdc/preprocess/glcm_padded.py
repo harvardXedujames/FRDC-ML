@@ -43,7 +43,9 @@ def glcm_padded(
         GLCM of shape (H, W, C, GLCM Features)
     """
     pad = radius + step_size
-    ar_pad = np.pad(ar, pad_width=((pad,), (pad,), (0,)), constant_values=np.nan)
+    ar_pad = np.pad(
+        ar, pad_width=((pad,), (pad,), (0,)), constant_values=np.nan
+    )
     g = glcm(
         ar_pad,
         bin_from=bin_from,

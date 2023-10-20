@@ -51,5 +51,10 @@ def test_facenet_frozen(facenet):
     """Assert that the base model is frozen, and the rest is trainable."""
     assert sum(p.numel() for p in facenet.parameters() if p.requires_grad) > 0
     assert (
-        sum(p.numel() for p in facenet.inception.parameters() if p.requires_grad) == 0
+        sum(
+            p.numel()
+            for p in facenet.inception.parameters()
+            if p.requires_grad
+        )
+        == 0
     )

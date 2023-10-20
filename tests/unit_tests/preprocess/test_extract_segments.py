@@ -114,7 +114,9 @@ def test_extract_segments():
     """
     ar_source = np.array([[[10], [20]], [[30], [40]]])
     ar_label = np.array([[0, 1], [2, 3]])
-    ar_segments = extract_segments_from_labels(ar_source, ar_label, cropped=False)
+    ar_segments = extract_segments_from_labels(
+        ar_source, ar_label, cropped=False
+    )
     assert np.isclose(
         ar_segments[0],
         np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]),

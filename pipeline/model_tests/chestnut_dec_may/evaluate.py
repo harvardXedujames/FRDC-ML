@@ -39,7 +39,11 @@ cm = confusion_matrix(y_true, y_pred)
 plt.figure(figsize=(10, 10))
 
 heatmap(
-    cm, annot=True, xticklabels=dm.le.classes_, yticklabels=dm.le.classes_, cbar=False
+    cm,
+    annot=True,
+    xticklabels=dm.le.classes_,
+    yticklabels=dm.le.classes_,
+    cbar=False,
 )
 
 plt.tight_layout(pad=3)

@@ -27,7 +27,9 @@ def train_val_test_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
     #  segments_1. Will need to refactor this.
     return [
         Subset(x, list(range(len(segments_0)))),
-        Subset(x, list(range(len(segments_0), len(segments_0) + len(segments_1)))),
+        Subset(
+            x, list(range(len(segments_0), len(segments_0) + len(segments_1)))
+        ),
         [],
     ]
 
