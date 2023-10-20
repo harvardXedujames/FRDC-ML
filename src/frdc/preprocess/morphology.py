@@ -7,8 +7,6 @@ from skimage.feature import peak_local_max
 from skimage.morphology import remove_small_objects, remove_small_holes
 from skimage.segmentation import watershed
 
-from frdc.conf import BAND_MAX_CONFIG
-
 
 def compute_labels(
         ar: np.ndarray,
@@ -47,6 +45,7 @@ def compute_labels(
         DeprecationWarning
     )
 
+    from frdc.preprocess.scale import scale_0_1_per_band
     ar = scale_0_1_per_band(ar)
     ar_mask = threshold_binary_mask(ar, nir_band_ix, nir_threshold_value)
     ar_mask = remove_small_objects(ar_mask, min_size=min_crown_size,
@@ -56,63 +55,6 @@ def compute_labels(
     ar_labels = binary_watershed(ar_mask, peaks_footprint,
                                  watershed_compactness)
     return ar_labels
-
-
-def scale_0_1_per_band(ar: np.ndarray) -> np.ndarray:
-    """ Scales an NDArray from 0 to 1 for each band independently
-
-    Args:
-        ar: NDArray of shape (H, W, C), where C is the number of bands.
-    """
-    ar_bands = []
-    for band in range(ar.shape[-1]):
-        ar_band = ar[:, :, band]
-        ar_band = ((ar_band - np.nanmin(ar_band)) /
-                   (np.nanmax(ar_band) - np.nanmin(ar_band)))
-        ar_bands.append(ar_band)
-
-    return np.stack(ar_bands, axis=-1)
-
-
-def scale_static_per_band(
-        ar: np.ndarray,
-        order: list[str],
-        bounds_config: dict[str, tuple[int, int]] = BAND_MAX_CONFIG
-) -> np.ndarray:
-    """ This scales statically per band, using the bounds_config.
-
-    Args:
-        ar: NDArray of shape (H, W, C), where C is the number of bands.
-        order: The order of the bands.
-        bounds_config: The bounds config, see BAND_MAX_CONFIG for an example.
-
-    Examples:
-        If you've retrieved the data from `get_ar_bands`, then you can use the
-        order returned from that function. This is the recommended way to use
-        this function.
-
-        >>> ar, order = get_ar_bands()
-        >>> scale_static_per_band(ar, order)
-
-        If you need more control over the order, you can specify it manually.
-        Given that you have an ar of shape (H, W, 3) with order
-        ['WB', 'WG', 'WR']
-
-        >>> scale_static_per_band(
-        >>>     ar, ['WB', 'WG', 'WR']
-        >>>     bounds_config={'WB': (0, 256), 'WG': (0, 256), 'WR': (0, 256)}
-        >>> )
-
-    Returns:
-        The scaled array.
-    """
-    ar = ar.copy()
-
-    for e, band in enumerate(order):
-        ar_min, ar_max = bounds_config[band]
-        ar[..., e] = (ar[..., e] - ar_min) / (ar_max - ar_min)
-
-    return ar
 
 
 def threshold_binary_mask(ar: np.ndarray,
