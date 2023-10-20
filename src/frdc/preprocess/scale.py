@@ -33,8 +33,8 @@ def scale_0_1_per_band(ar: np.ndarray,
     epsilon = 1e-7 if epsilon is True else epsilon
 
     return _fn_per_band(
-        ar, lambda x, _: (x - np.nanmin(x)) /
-                         (np.nanmax(x) - np.nanmin(x) + epsilon)
+        ar, lambda x: (x - np.nanmin(x)) /
+                      (np.nanmax(x) - np.nanmin(x) + epsilon)
     )
 
 
@@ -46,7 +46,7 @@ def scale_normal_per_band(ar: np.ndarray) -> np.ndarray:
         ar: NDArray of shape (H, W, C), where C is the number of bands.
     """
     return _fn_per_band(
-        ar, lambda x, _: (x - np.nanmean(x)) / np.nanstd(x)
+        ar, lambda x: (x - np.nanmean(x)) / np.nanstd(x)
     )
 
 
@@ -88,4 +88,3 @@ def scale_static_per_band(
         ar[..., e] = (ar[..., e] - ar_min) / (ar_max - ar_min)
 
     return ar
-
