@@ -50,4 +50,3 @@ def test_caching():
     # Clean up
     for f in cache_dir.glob("*.npy"):
         f.unlink()
-       
