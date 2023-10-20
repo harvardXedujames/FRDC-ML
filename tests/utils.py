@@ -1,6 +1,7 @@
 from skimage.morphology import remove_small_objects, remove_small_holes
 
-from frdc.preprocess import *
+from frdc.preprocess.morphology import threshold_binary_mask, binary_watershed
+from frdc.preprocess.scale import scale_0_1_per_band
 
 
 def get_labels(ar, order):
