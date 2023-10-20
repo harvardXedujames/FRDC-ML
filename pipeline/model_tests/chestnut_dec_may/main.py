@@ -18,7 +18,7 @@ from frdc.models import FaceNet
 from frdc.train import FRDCDataModule, FRDCModule
 from pipeline.model_tests.chestnut_dec_may.augmentation import augmentation
 from pipeline.model_tests.chestnut_dec_may.preprocess import preprocess
-from pipeline.model_tests.chestnut_dec_may.utils import get_dataset
+from pipeline.model_tests.utils import get_dataset
 
 
 def train_val_test_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
