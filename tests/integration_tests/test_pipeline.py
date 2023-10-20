@@ -6,8 +6,8 @@ from skimage.transform import resize
 from torch.utils.data import random_split
 
 from frdc.models import FaceNet
-from frdc.preprocess import extract_segments_from_labels, \
-    extract_segments_from_bounds
+from frdc.preprocess.extract_segments import extract_segments_from_bounds, \
+    extract_segments_from_labels
 from frdc.train import FRDCDataModule, FRDCModule
 from utils import get_labels
 
