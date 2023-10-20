@@ -15,13 +15,16 @@ Thus, our test is:
 """
 import numpy as np
 
-from frdc.preprocess import (extract_segments_from_bounds,
-                             extract_segments_from_labels, compute_labels,
-                             remove_small_segments_from_labels)
+from frdc.preprocess.extract_segments import (
+    remove_small_segments_from_labels,
+    extract_segments_from_bounds,
+    extract_segments_from_labels,
+)
+from utils import get_labels
 
 
 def test_remove_small_segments_from_labels():
-    """ We'll test that it correctly removes the correct segments.
+    """We'll test that it correctly removes the correct segments.
 
     The test case:
         1 1 2 2 2
@@ -47,13 +50,20 @@ def test_remove_small_segments_from_labels():
     ar[2:5, 0:2] = 3
     ar[2:5, 2:5] = 4
 
-    def test_unique_labels(expected_labels: set, min_height: int = 2,
-                           min_width: int = 2):
-        """ Tests the unique labels are as expected. """
-        assert set(np.unique(
-            remove_small_segments_from_labels(ar, min_height=min_height,
-                                              min_width=min_width)
-        )) == expected_labels
+    def test_unique_labels(
+        expected_labels: set, min_height: int = 2, min_width: int = 2
+    ):
+        """Tests the unique labels are as expected."""
+        assert (
+            set(
+                np.unique(
+                    remove_small_segments_from_labels(
+                        ar, min_height=min_height, min_width=min_width
+                    )
+                )
+            )
+            == expected_labels
+        )
 
     # 0 represents "removed" labels are relabelled to the background 0.
     test_unique_labels({1, 2, 3, 4}, min_height=2, min_width=2)
@@ -63,29 +73,67 @@ def test_remove_small_segments_from_labels():
     test_unique_labels({0}, min_height=4, min_width=4)
 
 
-def test_extract_segments_from_bounds_cropped(ds):
+def test_extract_segments_from_bounds_cropped(ds, ar):
     bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds,
-                                            cropped=True)
+    segments = extract_segments_from_bounds(ar, bounds, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
-def test_extract_segments_from_bounds_no_crop(ds):
+def test_extract_segments_from_bounds_no_crop(ds, ar):
     bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar := ds.get_ar_bands(), bounds,
-                                            cropped=False)
+    segments = extract_segments_from_bounds(ar, bounds, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
 
 
-def test_extract_segments_from_labels_cropped(ds):
-    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
-    segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels,
-                                            cropped=True)
+def test_extract_segments_from_labels_cropped(ar, order):
+    ar_labels = get_labels(ar, order)
+    segments = extract_segments_from_labels(ar, ar_labels, cropped=True)
     assert any(segment.shape != ar.shape for segment in segments)
 
 
-def test_extract_segments_from_labels_no_crop(ds):
-    ar_labels = compute_labels(ds.get_ar_bands(), peaks_footprint=10)
-    segments = extract_segments_from_labels(ar := ds.get_ar_bands(), ar_labels,
-                                            cropped=False)
+def test_extract_segments_from_labels_no_crop(ar, order):
+    ar_labels = get_labels(ar, order)
+    segments = extract_segments_from_labels(ar, ar_labels, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
+
+
+def test_extract_segments():
+    """Test our segment extraction function.
+
+    To do this, we have a source array and a label array.
+    Our function will loop through each unique label in the label array,
+    then mask the source array with that label.
+
+    The following thus should return
+    ar_segments = [
+        [[[10],[nan]],[[nan],[nan]]],
+        [[[nan],[20]],[[nan],[nan]]],
+        [[[nan],[nan]],[[30],[nan]]],
+        [[[nan],[nan]],[[nan],[40]]],
+    ]
+    """
+    ar_source = np.array([[[10], [20]], [[30], [40]]])
+    ar_label = np.array([[0, 1], [2, 3]])
+    ar_segments = extract_segments_from_labels(
+        ar_source, ar_label, cropped=False
+    )
+    assert np.isclose(
+        ar_segments[0],
+        np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[1],
+        np.array([[[np.nan], [20]], [[np.nan], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[2],
+        np.array([[[np.nan], [np.nan]], [[30], [np.nan]]]),
+        equal_nan=True,
+    ).all()
+    assert np.isclose(
+        ar_segments[3],
+        np.array([[[np.nan], [np.nan]], [[np.nan], [40]]]),
+        equal_nan=True,
+    ).all()

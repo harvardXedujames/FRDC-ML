@@ -7,11 +7,13 @@ from sklearn.ensemble import RandomForestClassifier
 
 # We force keyword arguments to make it easier to read the function signature.
 def dummy_train(
-        *,
-        X_train: np.ndarray, y_train: np.ndarray,
-        X_val: np.ndarray, y_val: np.ndarray
+    *,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray
 ) -> tuple[Callable[[np.ndarray], np.ndarray], ClassifierMixin, float]:
-    """ Dummy Training function.
+    """Dummy Training function.
 
     Notes:
         This is obviously not final. This is just a placeholder to get the
@@ -36,7 +38,7 @@ def dummy_train(
                 np.nanmean(X, axis=(1, 2, 3)),
                 np.nanstd(X, axis=(1, 2, 3)),
             ],
-            axis=-1
+            axis=-1,
         )
 
     X_train = feature_extraction(X_train)

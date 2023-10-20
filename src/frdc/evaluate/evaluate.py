@@ -5,11 +5,13 @@ from sklearn.base import ClassifierMixin
 
 
 def dummy_evaluate(
-        *,
-        feature_extraction: Callable[[np.ndarray], np.ndarray],
-        classifier: ClassifierMixin,
-        X_test: np.ndarray, y_test: np.ndarray) -> float:
-    """ Dummy Evaluation function.
+    *,
+    feature_extraction: Callable[[np.ndarray], np.ndarray],
+    classifier: ClassifierMixin,
+    X_test: np.ndarray,
+    y_test: np.ndarray
+) -> float:
+    """Dummy Evaluation function.
 
     Notes:
         This is obviously not final. This is just a placeholder to get the
