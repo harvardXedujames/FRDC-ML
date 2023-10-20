@@ -15,7 +15,11 @@ Thus, our test is:
 """
 import numpy as np
 
-from frdc.preprocess import *
+from frdc.preprocess.extract_segments import (
+    remove_small_segments_from_labels,
+    extract_segments_from_bounds,
+    extract_segments_from_labels
+)
 from utils import get_labels
 
 
@@ -84,3 +88,42 @@ def test_extract_segments_from_labels_no_crop(ar, order):
     ar_labels = get_labels(ar, order)
     segments = extract_segments_from_labels(ar, ar_labels, cropped=False)
     assert all(segment.shape == ar.shape for segment in segments)
+
+
+def test_extract_segments():
+    """ Test our segment extraction function.
+
+    To do this, we have a source array and a label array.
+    Our function will loop through each unique label in the label array,
+    then mask the source array with that label.
+
+    The following thus should return
+    ar_segments = [
+        [[[10],[nan]],[[nan],[nan]]],
+        [[[nan],[20]],[[nan],[nan]]],
+        [[[nan],[nan]],[[30],[nan]]],
+        [[[nan],[nan]],[[nan],[40]]],
+    ]
+    """
+    ar_source = np.array(
+        [[[10], [20]],
+         [[30], [40]]]
+    )
+    ar_label = np.array(
+        [[0, 1],
+         [2, 3]]
+    )
+    ar_segments = extract_segments_from_labels(ar_source, ar_label,
+                                               cropped=False)
+    assert np.isclose(ar_segments[0],
+                      np.array([[[10], [np.nan]], [[np.nan], [np.nan]]]),
+                      equal_nan=True).all()
+    assert np.isclose(ar_segments[1],
+                      np.array([[[np.nan], [20]], [[np.nan], [np.nan]]]),
+                      equal_nan=True).all()
+    assert np.isclose(ar_segments[2],
+                      np.array([[[np.nan], [np.nan]], [[30], [np.nan]]]),
+                      equal_nan=True).all()
+    assert np.isclose(ar_segments[3],
+                      np.array([[[np.nan], [np.nan]], [[np.nan], [40]]]),
+                      equal_nan=True).all()
