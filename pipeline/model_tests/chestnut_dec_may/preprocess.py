@@ -1,17 +1,21 @@
 import numpy as np
 import torch
+from glcm_cupy import Features
 from torchvision.transforms.v2 import Resize
 
 from frdc.models import FaceNet
 from frdc.preprocess import scale_0_1_per_band
-from pipeline.model_tests.chestnut_dec_may.utils import Functional as F
+from frdc.preprocess.glcm_padded import append_glcm_padded_cached
+from frdc.preprocess.scale import scale_normal_per_band
 
+
+# TODO: Eventually, we will have multiple tests, and we should try to make
+#   this function test agnostic.
 
 def channel_preprocess(ar: np.ndarray) -> np.ndarray:
     # Preprocesses a channel array of shape: (H, W)
     shape = ar.shape
     ar_flt = ar.flatten()
-    ar_flt = F.whiten(ar_flt)
     return ar_flt.reshape(*shape)
 
 
@@ -21,14 +25,20 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     # We divide by 1.001 is make the range [0, 1) instead of [0, 1] so that
     # glcm_padded can work properly.
     ar = scale_0_1_per_band(ar) / 1.001
-    ar = F.glcm(ar)
-    ar = np.stack([
-        channel_preprocess(ar[..., ch]) for ch in range(ar.shape[-1])
-    ])
+    # We scale 0 1 before GLCM so that binning works
+    ar = append_glcm_padded_cached(ar,
+                                   step_size=7, bin_from=1, bin_to=128,
+                                   radius=3, features=(Features.MEAN,))
+    # We can then scale normal for better neural network convergence
+    ar = scale_normal_per_band(ar)
+
+    # TODO: Doesn't seem like we have any channel preprocessing here.
+    # ar = np.stack([
+    #     channel_preprocess(ar[..., ch]) for ch in range(ar.shape[-1])
+    # ])
 
     t = torch.from_numpy(ar)
-    t = Resize([FaceNet.MIN_SIZE, FaceNet.MIN_SIZE],
-               antialias=True)(t)
+    t = Resize([FaceNet.MIN_SIZE, FaceNet.MIN_SIZE], antialias=True)(t)
     return t
 
 
