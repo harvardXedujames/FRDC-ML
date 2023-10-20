@@ -37,7 +37,7 @@ def compute_labels(
         Background is of shape (H, W, C), where C is the number of bands
         Crowns is a list[np.ndarray] crowns, each of shape (H, W, C).
     """
-    # Raise deprecation worning
+    # Raise deprecation warning
     warnings.warn(
         "This function is to be deprecated. use functions separately instead "
         "for more control over the parameters. This function assumes the NIR "
