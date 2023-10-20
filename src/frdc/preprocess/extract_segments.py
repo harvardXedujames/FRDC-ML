@@ -3,7 +3,7 @@ from typing import Iterable
 
 import numpy as np
 
-from frdc.utils.utils import Rect
+from frdc.utils import Rect
 
 
 def remove_small_segments_from_labels(
