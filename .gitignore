@@ -164,9 +164,4 @@ cython_debug/
 # Ignores the raw .tif files
 rsc/**/*.tif
 
-# Ignore any secrets files
-.secrets/
-# REMOVE ONLY IF THE SECRET FILES ARE IN .secrets
-*.json
-
 **/*/lightning_logs
