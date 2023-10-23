@@ -68,16 +68,21 @@
         </a>
     </step>
     <step>
-        Then, you need to
+        Then,
         <a href="https://cloud.google.com/sdk/docs/initializing">
           authenticate your account
         </a>.
+        <code-block lang="shell">gcloud auth login</code-block>
     </step>
     <step>
-        To make sure everything is working, run the following command:
-        <code-block lang="shell">
-            gsutil ls
-        </code-block>
+        Finally, 
+        <a href="https://cloud.google.com/docs/authentication/provide-credentials-adc">
+          set up Application Default Credentials (ADC)
+        </a>.
+        <code-block lang="shell">gcloud auth application-default login</code-block>
+    </step>
+    <step>
+        To make sure everything is working, <a anchor="tests">run the tests</a>.
     </step>
 </procedure>
 
@@ -93,7 +98,7 @@
     </step>
 </procedure>
 
-<procedure title="Running the Tests" collapsible="true">
+<procedure title="Running the Tests" collapsible="true" id="tests">
     <step>
         Run the tests to make sure everything is working
         <code-block lang="shell">
