@@ -10,7 +10,8 @@
     <toc-element topic="Overview.md"/>
     <toc-element topic="Getting-Started.md"/>
     <toc-element topic="load.dataset.md"/>
-    <toc-element topic="preprocessing.scale.md"/>
-    <toc-element topic="preprocessing.morphology.md"/>
+    <toc-element topic="preprocessing.scale.md">
+    </toc-element>
     <toc-element topic="preprocessing.extract_segments.md"/>
+    <toc-element topic="preprocessing.morphology.md"/>
 </instance-profile>
