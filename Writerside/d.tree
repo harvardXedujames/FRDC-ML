@@ -8,4 +8,5 @@
 
     <toc-element topic="Overview.md"/>
     <toc-element topic="Getting-Started.md"/>
+    <toc-element topic="Dataset.md"/>
 </instance-profile>
