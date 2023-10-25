@@ -12,13 +12,13 @@ Scale assumes H x W x C, where C is the number of bands.
 
 <deflist type="medium">
 <def title="scale_0_1_per_band">
-<b>Scales the NDArray bands to [0, 1] per band.</b><br/>
+<b>Scales the NDArray bands to [0, 1] per band.</b>
 </def>
 <def title="scale_normal_per_band">
-<b>Scales the NDArray bands to zero mean unit variance per band.</b><br/>
+<b>Scales the NDArray bands to zero mean unit variance per band.</b>
 </def>
 <def title="scale_static_per_band">
-<b>Scales the NDArray bands by a predefined configuration.</b><br/>
+<b>Scales the NDArray bands by a predefined configuration.</b>
 </def>
 </deflist>
 
