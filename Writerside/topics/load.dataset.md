@@ -136,7 +136,7 @@ is a list of labels.<br/>
 
 <deflist>
 <def title="list_gcs_datasets(anchor)">
-<b>Lists all GCS datasets in the bucket as a DataFrame.</b><br/>
+<b>Lists all GCS datasets in the bucket as <code>DataFrame</code></b><br/>
 This works by checking which folders have a specific file, which we call the
 <code>anchor</code>.
 </def>
