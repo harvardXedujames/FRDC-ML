@@ -40,8 +40,8 @@ ar_norm = scale_normal_per_band(ar)
 ar_static = scale_static_per_band(ar, order, BAND_MAX_CONFIG)
 ```
 
-> The static scaling has a default config infers the max bit depth from the
-> capturing device.
+> The static scaling has a default config, which was inferred by our capturing
+> device.
 
 ## API
 

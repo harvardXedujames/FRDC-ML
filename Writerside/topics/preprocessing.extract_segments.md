@@ -121,13 +121,13 @@ For example, the label 1 and 2 extracted images will be
 </tab>
 </tabs>
 
-## Usage
-
 - If **cropped is False**, the segments are padded with 0s to the
   original image size. While this can ensure shape consistency, it can consume
   more memory for large images.
 - If **cropped is True**, the segments are cropped to the minimum bounding box.
   This can save memory, but the shape of the segments will be inconsistent.
+
+## Usage
 
 ### Extract from Bounds and Labels
 

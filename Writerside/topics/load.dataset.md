@@ -93,12 +93,15 @@ This doesn't immediately download the dataset, but only when you call the
 <code>get_*</code> functions.<br/>
 The site, date, version must match the dataset path on GCS. For example
 if the dataset is at
-<code>gs://frdc-scan/my-site/date/90deg/map</code>,
+<code>gs://frdc-scan/my-site/20201218/90deg/map</code>,
 <list>
-<li>site: <code>'my-site'</code></li>
-<li>date: <code>'20201218'</code></li>
-<li>version: <code>'90deg/map'</code></li>
+<li><code>site='my-site'</code></li>
+<li><code>date='20201218'</code></li>
+<li><code>version='90deg/map'</code></li>
 </list>
+If the dataset doesn't have a "version", for example:
+<code>gs://frdc-scan/my-site/20201218</code>,
+then you can pass in <code>version=None</code>.<br/>
 <note>
 If you don't want to search up GCS, you can use FRDCDownloader to list all
 datasets, and their versions with 
