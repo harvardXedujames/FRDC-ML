@@ -9,11 +9,12 @@
 
     <toc-element topic="Overview.md"/>
     <toc-element topic="Getting-Started.md"/>
+    <toc-element topic="Model-Test-Chestnut-May-Dec.md"/>
     <toc-element topic="load.dataset.md"/>
     <toc-element topic="preprocessing.scale.md">
     </toc-element>
     <toc-element topic="preprocessing.extract_segments.md"/>
     <toc-element topic="preprocessing.morphology.md"/>
     <toc-element topic="preprocessing.glcm_padded.md"/>
-    <toc-element topic="train.frdc_datamodule.md"/>
+    <toc-element topic="train.frdc_lightning.md"/>
 </instance-profile>
