@@ -11,7 +11,7 @@ Performs morphological operations on the NDArray bands.
 ## Functions
 
 <warning>
-Scale assumes H x W x C, where C is the number of bands.
+Assumes shape H x W x C, where C is the number of bands.
 </warning>
 
 <deflist type="medium">
