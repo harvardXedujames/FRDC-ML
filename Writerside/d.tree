@@ -15,4 +15,5 @@
     <toc-element topic="preprocessing.extract_segments.md"/>
     <toc-element topic="preprocessing.morphology.md"/>
     <toc-element topic="preprocessing.glcm_padded.md"/>
+    <toc-element topic="train.frdc_datamodule.md"/>
 </instance-profile>
