@@ -11,7 +11,7 @@ def dummy_train(
     X_train: np.ndarray,
     y_train: np.ndarray,
     X_val: np.ndarray,
-    y_val: np.ndarray
+    y_val: np.ndarray,
 ) -> tuple[Callable[[np.ndarray], np.ndarray], ClassifierMixin, float]:
     """Dummy Training function.
 
