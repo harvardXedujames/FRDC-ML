@@ -9,7 +9,7 @@ def dummy_evaluate(
     feature_extraction: Callable[[np.ndarray], np.ndarray],
     classifier: ClassifierMixin,
     X_test: np.ndarray,
-    y_test: np.ndarray
+    y_test: np.ndarray,
 ) -> float:
     """Dummy Evaluation function.
 
