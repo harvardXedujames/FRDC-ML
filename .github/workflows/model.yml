@@ -21,6 +21,7 @@ jobs:
       - name: Install poetry
         run: |
           python3 -m pip install --user pipx
+          python -m pipx ensurepath
           pipx install poetry
 
       - name: Set up gcloud
