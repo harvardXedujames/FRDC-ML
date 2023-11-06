@@ -18,13 +18,11 @@ jobs:
           python-version: "3.11"
           cache: 'poetry'
 
-      - name: Install pipx
+      - name: Install poetry
         run: |
           python3 -m pip install --user pipx
           python -m pipx ensurepath
-
-      - name: Install poetry
-        run: |
+          echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
           pipx install poetry
 
       - name: Set up gcloud
