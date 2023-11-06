@@ -21,9 +21,9 @@ jobs:
       - name: Install poetry
         run: |
           python3 -m pip install --user pipx
-          python -m pipx ensurepath
+          python3 -m pipx ensurepath
           echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
-          pipx install poetry
+          python3 -m pipx install poetry
 
       - name: Set up gcloud
         id: 'auth'
