@@ -35,14 +35,14 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
 
       #     We don't necessarily need to install the CUDA version of torch, so we'll do with cpu
-      - name: Install dependencies
+      - name: Install dependencies through poetry
         run: |
           python -m pip install --upgrade pip
           poetry install --with dev,glcm
 #          pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-      - name: Test with pytest
+      - name: Test with pytest through poetry
         run: |
-          pytest tests/model_tests
+          poetry run pytest tests/model_tests
 
 
