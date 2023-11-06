@@ -9,6 +9,8 @@ jobs:
   build:
 
     runs-on: self-hosted
+    container:
+      image: nvidia/cuda:12.2.2-devel-ubuntu22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -33,9 +35,6 @@ jobs:
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-
-      - uses: Jimver/cuda-toolkit@v0.2.11
-        id: cuda-toolkit
 
       #     We don't necessarily need to install the CUDA version of torch, so we'll do with cpu
       - name: Install dependencies through poetry
