@@ -12,19 +12,19 @@ jobs:
     container: docker://ghcr.io/iterative/cml:0-dvc2-base1-gpu
     steps:
       - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+#          cache: 'poetry'
+
       - name: Install poetry
         run: |
           python3 -m pip install --user pipx
           python3 -m pipx ensurepath
           echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
           python3 -m pipx install poetry
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-          cache: 'poetry'
-
-
 
       - name: Set up gcloud
         id: 'auth'
