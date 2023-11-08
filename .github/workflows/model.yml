@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Model Training
         run: |
-          python3 tests/model_tests/chestnut_dec_may/main.py
+          python3 -m tests.model_tests.chestnut_dec_may.main  
 
       - name: Comment results via CML
         run: |
