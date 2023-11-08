@@ -3,6 +3,7 @@
 This test is done by training a model on the 20201218 dataset, then testing on
 the 20210510 dataset.
 """
+from pathlib import Path
 
 import lightning as pl
 import numpy as np
@@ -117,7 +118,8 @@ report = f"""
 [WandB Report]({run.get_url()})
 """
 
-with open("report.md", "w") as f:
+
+with open(Path(__file__).parent / "report.md", "w") as f:
     f.write(report)
 
 
