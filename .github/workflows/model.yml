@@ -9,8 +9,8 @@ jobs:
   build:
 
     runs-on: self-hosted
-    container:
-      image: nvidia/cuda:12.2.2-devel-ubuntu22.04
+#    container:
+#      image: nvidia/cuda:12.2.2-devel-ubuntu22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -45,6 +45,6 @@ jobs:
 
       - name: Test with pytest through poetry
         run: |
-          poetry run pytest tests/model_tests
+          poetry run pytest 
 
 
