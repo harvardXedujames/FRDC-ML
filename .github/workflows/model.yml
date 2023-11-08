@@ -25,6 +25,7 @@ jobs:
           python3 -m pipx ensurepath
           echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
           python3 -m pipx install poetry
+          pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
       - name: Set up gcloud
         id: 'auth'
