@@ -58,7 +58,7 @@ segments = [*segments_0, *segments_1]
 labels = [*labels_0, *labels_1]
 
 BATCH_SIZE = 5
-# EPOCHS = 100
+EPOCHS = 10
 LR = 1e-3
 
 # Prepare the datamodule and trainer
@@ -78,9 +78,9 @@ dm = FRDCDataModule(
 )
 
 trainer = pl.Trainer(
-    max_epochs=1,
+    max_epochs=EPOCHS,
+    # fast_dev_run=True,
     # Set the seed for reproducibility
-    fast_dev_run=True,
     # TODO: Though this is set, the results are still not reproducible.
     deterministic=True,
     # fast_dev_run=True,
@@ -116,8 +116,8 @@ np.save("le.npy", dm.le.classes_)
 report = f"""
 # Chestnut Nature Park (Dec 2020 vs May 2021)
 [WandB Report]({run.get_url()})
+TODO: Authentication for researchers
 """
-
 
 with open(Path(__file__).parent / "report.md", "w") as f:
     f.write(report)
