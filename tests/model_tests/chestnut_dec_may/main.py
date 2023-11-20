@@ -3,6 +3,7 @@
 This test is done by training a model on the 20201218 dataset, then testing on
 the 20210510 dataset.
 """
+from pathlib import Path
 
 import lightning as pl
 import numpy as np
@@ -16,19 +17,30 @@ from torch.utils.data import TensorDataset, Dataset, Subset
 
 from frdc.models import FaceNet
 from frdc.train import FRDCDataModule, FRDCModule
-from pipeline.model_tests.chestnut_dec_may.augmentation import augmentation
-from pipeline.model_tests.chestnut_dec_may.preprocess import preprocess
-from pipeline.model_tests.utils import get_dataset
+from tests.model_tests.chestnut_dec_may.augmentation import augmentation
+from tests.model_tests.chestnut_dec_may.preprocess import preprocess
+from tests.model_tests.utils import get_dataset
+from lightning.pytorch.loggers import WandbLogger
+import wandb
+
+assert wandb.run is None
+
+wandb.setup(wandb.Settings(program=__name__, program_relpath=__name__))
+run = wandb.init()
+logger = WandbLogger(name="chestnut_dec_may", project="frdc")
 
 
-def train_val_test_split(x: TensorDataset) -> list[Dataset, Dataset, Dataset]:
+def train_val_test_split(
+    x: TensorDataset,
+) -> list[Dataset, Dataset, Dataset]:
     # Defines how to split the dataset into train, val, test subsets.
     # TODO: Quite ugly as it uses the global variables segments_0 and
     #  segments_1. Will need to refactor this.
     return [
         Subset(x, list(range(len(segments_0)))),
         Subset(
-            x, list(range(len(segments_0), len(segments_0) + len(segments_1)))
+            x,
+            list(range(len(segments_0), len(segments_0) + len(segments_1))),
         ),
         [],
     ]
@@ -40,12 +52,13 @@ segments_1, labels_1 = get_dataset(
     "chestnut_nature_park", "20210510", "90deg43m85pct255deg/map"
 )
 
+
 # Concatenate the datasets
 segments = [*segments_0, *segments_1]
 labels = [*labels_0, *labels_1]
 
 BATCH_SIZE = 5
-EPOCHS = 100
+# EPOCHS = 100
 LR = 1e-3
 
 # Prepare the datamodule and trainer
@@ -65,10 +78,13 @@ dm = FRDCDataModule(
 )
 
 trainer = pl.Trainer(
-    max_epochs=EPOCHS,
+    max_epochs=1,
     # Set the seed for reproducibility
+    fast_dev_run=True,
     # TODO: Though this is set, the results are still not reproducible.
     deterministic=True,
+    # fast_dev_run=True,
+    accelerator="cpu",
     log_every_n_steps=4,
     callbacks=[
         # Stop training if the validation loss doesn't improve for 4 epochs
@@ -78,11 +94,13 @@ trainer = pl.Trainer(
         # Save the best model
         ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1),
     ],
+    logger=logger,
 )
 
 m = FRDCModule(
     # Our model is the "FaceNet" model
-    # TODO: It's not really the FaceNet model, but a modified version of it.
+    # TODO: It's not really the FaceNet model,
+    #  but a modified version of it.
     model_cls=FaceNet,
     model_kwargs=dict(n_out_classes=len(set(labels))),
     # We use the Adam optimizer
@@ -94,3 +112,15 @@ m = FRDCModule(
 trainer.fit(m, datamodule=dm)
 # TODO: Quite hacky, but we need to save the label encoder for prediction.
 np.save("le.npy", dm.le.classes_)
+
+report = f"""
+# Chestnut Nature Park (Dec 2020 vs May 2021)
+[WandB Report]({run.get_url()})
+"""
+
+
+with open(Path(__file__).parent / "report.md", "w") as f:
+    f.write(report)
+
+
+wandb.finish()

@@ -1,0 +1,58 @@
+name: Model Training
+
+on:
+  pull_request:
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+    container:
+      image: docker://ghcr.io/iterative/cml:0-dvc2-base1-gpu
+      volumes:
+        - /home/runner/work/_temp/_github_home:/root
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install via exported requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 pytest poetry
+          poetry export --with dev --without-hashes -o requirements.txt
+          pip3 install -r requirements.txt
+          pip3 install torch torchvision torchaudio 
+
+      - name: Set up gcloud
+        id: 'auth'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.FRDC_DOWNLOAD_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v1'
+
+      - name: Set up WandB
+        run: |
+          echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Add src as PYTHONPATH
+        run: |
+          echo "PYTHONPATH=src" >> $GITHUB_ENV
+
+      - name: Run Model Training
+        run: |
+          python3 -m tests.model_tests.chestnut_dec_may.main  
+
+      - name: Comment results via CML
+        run: |
+          cml comment update \
+          --target=pr \
+          --token ${{ secrets.GITHUB_TOKEN }} \
+          tests/model_tests/chestnut_dec_may/report.md
