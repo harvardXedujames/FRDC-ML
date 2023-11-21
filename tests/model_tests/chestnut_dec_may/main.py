@@ -58,7 +58,7 @@ segments = [*segments_0, *segments_1]
 labels = [*labels_0, *labels_1]
 
 BATCH_SIZE = 5
-EPOCHS = 10
+EPOCHS = 20
 LR = 1e-3
 
 # Prepare the datamodule and trainer
