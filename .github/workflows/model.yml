@@ -10,7 +10,9 @@ jobs:
     container:
       image: docker://ghcr.io/iterative/cml:0-dvc2-base1-gpu
       volumes:
-        - /home/runner/work/_temp/_github_home:/root
+        - /home/runner/work/frdc-ml/_github_home:/root
+      env:
+        AGENT_TOOLSDIRECTORY: "/root/venv"
 
     steps:
       - uses: actions/checkout@v3
@@ -18,11 +20,11 @@ jobs:
       - name: Force change owner
         run: |
           chown -R root: ~
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: 'pip'
 
       - name: Install via exported requirements.txt
         run: |
@@ -30,7 +32,7 @@ jobs:
           python -m pip install flake8 pytest poetry
           poetry export --with dev --without-hashes -o requirements.txt
           pip3 install -r requirements.txt
-          pip3 install torch torchvision torchaudio 
+          pip3 install torch torchvision torchaudio
 
       - name: Set up gcloud
         id: 'auth'
@@ -51,7 +53,7 @@ jobs:
 
       - name: Run Model Training
         run: |
-          python3 -m tests.model_tests.chestnut_dec_may.main  
+          python3 -m tests.model_tests.chestnut_dec_may.main
 
       - name: Comment results via CML
         run: |
