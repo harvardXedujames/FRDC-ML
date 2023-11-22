@@ -20,6 +20,7 @@ jobs:
       - name: Force change owner
         run: |
           chown -R root: ~
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
@@ -31,7 +32,7 @@ jobs:
           python -m pip install flake8 pytest poetry
           poetry export --with dev --without-hashes -o requirements.txt
           pip3 install -r requirements.txt
-          pip3 install torch torchvision torchaudio 
+          pip3 install torch torchvision torchaudio
 
       - name: Set up gcloud
         id: 'auth'
@@ -52,7 +53,7 @@ jobs:
 
       - name: Run Model Training
         run: |
-          python3 -m tests.model_tests.chestnut_dec_may.main  
+          python3 -m tests.model_tests.chestnut_dec_may.main
 
       - name: Comment results via CML
         run: |
