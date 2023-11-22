@@ -10,7 +10,7 @@ jobs:
     container:
       image: docker://ghcr.io/iterative/cml:0-dvc2-base1-gpu
       volumes:
-        - /home/runner/work/_temp/_github_home:/root
+        - /home/runner/work/frdc-ml/Python:/__w/_tool/Python
 
     steps:
       - uses: actions/checkout@v3
