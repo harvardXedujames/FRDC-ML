@@ -57,6 +57,9 @@ jobs:
         run: |
           echo "PYTHONPATH=src" >> $GITHUB_ENV
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
       # Do not do cd as it'll break PYTHONPATH.
       - name: Run Model Training
         run: |
