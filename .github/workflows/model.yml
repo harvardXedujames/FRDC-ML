@@ -14,6 +14,7 @@ jobs:
       env:
         # This is where setup-python will install and cache the venv
         AGENT_TOOLSDIRECTORY: "/root/venv"
+      options: --gpus all
 
     steps:
       - uses: actions/checkout@v3
@@ -35,9 +36,8 @@ jobs:
           pip3 install -r requirements.txt
           pip3 install torch torchvision torchaudio
 
-      - name: Check torch.cuda.is_available
-        run: |
-          python3 -c 'import torch; torch.cuda.is_available()' && exit 0 || exit 1
+      - name: Check CUDA is available
+        run: nvidia-smi
 
       - name: Auth gcloud
         id: 'auth'
@@ -57,13 +57,9 @@ jobs:
         run: |
           echo "PYTHONPATH=src" >> $GITHUB_ENV
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       # Do not do cd as it'll break PYTHONPATH.
       - name: Run Model Training
         run: |
-          sleep 1000
           python3 -m tests.model_tests.chestnut_dec_may.main
 
       - name: Comment results via CML
