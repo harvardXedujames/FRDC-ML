@@ -84,7 +84,7 @@ trainer = pl.Trainer(
     # TODO: Though this is set, the results are still not reproducible.
     deterministic=True,
     # fast_dev_run=True,
-    accelerator="cpu",
+    accelerator="gpu",
     log_every_n_steps=4,
     callbacks=[
         # Stop training if the validation loss doesn't improve for 4 epochs

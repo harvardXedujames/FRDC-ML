@@ -166,3 +166,4 @@ rsc/**/*.tif
 
 **/*/lightning_logs
 *.zip
+*.sh
