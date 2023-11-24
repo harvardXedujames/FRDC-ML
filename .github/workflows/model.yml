@@ -60,6 +60,7 @@ jobs:
       # Do not do cd as it'll break PYTHONPATH.
       - name: Run Model Training
         run: |
+          sleep 1000
           python3 -m tests.model_tests.chestnut_dec_may.main
 
       - name: Comment results via CML
