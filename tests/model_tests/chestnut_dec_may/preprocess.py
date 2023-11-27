@@ -4,7 +4,7 @@ import torch
 # from glcm_cupy import Features
 from torchvision.transforms.v2 import Resize
 
-from frdc.models import FaceNet
+from frdc.models import InceptionV3
 
 # from frdc.preprocess.glcm_padded import append_glcm_padded_cached
 from frdc.preprocess.scale import scale_normal_per_band, scale_0_1_per_band
@@ -44,7 +44,7 @@ def segment_preprocess(ar: np.ndarray) -> torch.Tensor:
     # ])
 
     t = torch.from_numpy(ar)
-    t = Resize([FaceNet.MIN_SIZE, FaceNet.MIN_SIZE], antialias=True)(t)
+    t = Resize([InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE], antialias=True)(t)
     return t
 
 

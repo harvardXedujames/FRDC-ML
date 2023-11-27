@@ -3,7 +3,7 @@ from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
 
-class FaceNet(nn.Module):
+class InceptionV3(nn.Module):
     INCEPTION_OUT_DIMS = 2048
     INCEPTION_AUX_DIMS = 1000
     INCEPTION_IN_CHANNELS = 3

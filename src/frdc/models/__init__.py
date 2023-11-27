@@ -1,5 +1,5 @@
-from .facenet import FaceNet
+from .inceptionv3 import InceptionV3
 
 __all__ = [
-    "FaceNet",
+    "InceptionV3",
 ]

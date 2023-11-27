@@ -5,17 +5,17 @@ import torch
 from skimage.transform import resize
 from torch.utils.data import random_split
 
-from frdc.models import FaceNet
+from frdc.models import InceptionV3
 from frdc.preprocess.extract_segments import (
     extract_segments_from_bounds,
     extract_segments_from_labels,
 )
 from frdc.train import FRDCDataModule, FRDCModule
-from utils import get_labels
+from tests.utils import get_labels
 
 
 def fn_segment_tf(x):
-    x = [resize(s, [FaceNet.MIN_SIZE, FaceNet.MIN_SIZE]) for s in x]
+    x = [resize(s, [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE]) for s in x]
     x = [torch.from_numpy(s) for s in x]
     x = torch.stack(x)
     x = torch.nan_to_num(x)
@@ -45,7 +45,7 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
         batch_size=BATCH_SIZE,
     )
     m = FRDCModule(
-        model_cls=FaceNet,
+        model_cls=InceptionV3,
         model_kwargs={"n_out_classes": 10},
         optim_cls=torch.optim.Adam,
         optim_kwargs=dict(lr=1e-3),
