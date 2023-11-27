@@ -45,10 +45,10 @@ class FRDCDataModule(LightningDataModule):
         then permuted to be (batch, channels, height, width).:
 
         >>> from skimage.transform import resize
-        >>> from frdc.models import FaceNet
+        >>> from frdc.models import InceptionV3
         >>>
         >>> fn_segment_tf=lambda x: torch.stack([
-        >>>     torch.from_numpy(resize(s, FaceNet.MIN_SIZE)) for s in x
+        >>>     torch.from_numpy(resize(s, InceptionV3.MIN_SIZE)) for s in x
         >>> ]).permute(0, 3, 1, 2)
 
         The fn_split could be a function that splits the dataset into

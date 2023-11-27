@@ -15,7 +15,7 @@ from lightning.pytorch.callbacks import (
 )
 from torch.utils.data import TensorDataset, Dataset, Subset
 
-from frdc.models import FaceNet
+from frdc.models import InceptionV3
 from frdc.train import FRDCDataModule, FRDCModule
 from tests.model_tests.chestnut_dec_may.augmentation import augmentation
 from tests.model_tests.chestnut_dec_may.preprocess import preprocess
@@ -101,7 +101,7 @@ m = FRDCModule(
     # Our model is the "FaceNet" model
     # TODO: It's not really the FaceNet model,
     #  but a modified version of it.
-    model_cls=FaceNet,
+    model_cls=InceptionV3,
     model_kwargs=dict(n_out_classes=len(set(labels))),
     # We use the Adam optimizer
     optim_cls=torch.optim.Adam,
