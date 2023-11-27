@@ -11,7 +11,7 @@ from frdc.preprocess.extract_segments import (
     extract_segments_from_labels,
 )
 from frdc.train import FRDCDataModule, FRDCModule
-from tests.utils import get_labels
+from utils import get_labels
 
 
 def fn_segment_tf(x):
