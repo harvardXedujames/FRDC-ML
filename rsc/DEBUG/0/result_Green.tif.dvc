@@ -1,0 +1,5 @@
+outs:
+- md5: 2643f64a2e775d4ee95583e108ab5e9c
+  size: 60134
+  hash: md5
+  path: result_Green.tif

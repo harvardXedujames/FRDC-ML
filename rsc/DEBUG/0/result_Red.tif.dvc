@@ -1,0 +1,5 @@
+outs:
+- md5: f566accc812ae46a0147b0078d0f4411
+  size: 60134
+  hash: md5
+  path: result_Red.tif

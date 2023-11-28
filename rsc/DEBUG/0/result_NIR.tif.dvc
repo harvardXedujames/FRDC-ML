@@ -1,0 +1,5 @@
+outs:
+- md5: 946c2eedf7e658fd9924b0a99b3282fa
+  size: 60134
+  hash: md5
+  path: result_NIR.tif

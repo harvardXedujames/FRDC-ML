@@ -1,5 +1,6 @@
- [core]
+[core]
     remote = frdc-scan
+    autostage = true
 ['remote "frdc-scan"']
     url = gs://frdc-scan/dvc/
     version_aware = true

@@ -1,0 +1,5 @@
+outs:
+- md5: 28e12a1cf02988bb632cd4499100ab2a
+  size: 352
+  hash: md5
+  path: scratch.py

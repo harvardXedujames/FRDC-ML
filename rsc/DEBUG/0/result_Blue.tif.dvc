@@ -1,0 +1,5 @@
+outs:
+- md5: 663cb540356deb8811d0b779e4435bf5
+  size: 60134
+  hash: md5
+  path: result_Blue.tif
