@@ -45,10 +45,12 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
         batch_size=BATCH_SIZE,
     )
     m = FRDCModule(
-        model_cls=InceptionV3,
-        model_kwargs={"n_out_classes": 10},
-        optim_cls=torch.optim.Adam,
-        optim_kwargs=dict(lr=1e-3),
+        model_f=lambda: InceptionV3(n_out_classes=10),
+        optim_f=lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
+        scheduler_f=lambda optim: torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=optim,
+            gamma=0.99,
+        )
     )
 
     trainer = pl.Trainer(fast_dev_run=True)

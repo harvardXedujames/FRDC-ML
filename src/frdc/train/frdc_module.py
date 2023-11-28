@@ -1,3 +1,5 @@
+from typing import Callable
+
 import torch
 from lightning import LightningModule
 from torch import nn
@@ -5,18 +7,17 @@ from torch import nn
 
 class FRDCModule(LightningModule):
     def __init__(
-        self,
-        *,
-        model_cls: type[nn.Module],
-        model_kwargs: dict,
-        optim_cls: type[torch.optim.Optimizer],
-        optim_kwargs: dict,
+            self,
+            *,
+            model_f: Callable[[], nn.Module],
+            optim_f: Callable[[nn.Module], torch.optim.Optimizer],
+            scheduler_f: Callable[[torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler],
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.model = model_cls(**model_kwargs)
-        self.optim = optim_cls
-        self.optim_kwargs = optim_kwargs
+        self.model = model_f()
+        self.optim = optim_f(self.model)
+        self.scheduler = scheduler_f(self.optim)
 
     def forward(self, x):
         return self.model(x)
@@ -55,9 +56,4 @@ class FRDCModule(LightningModule):
         return y_hat
 
     def configure_optimizers(self):
-        optim = self.optim(self.parameters(), **self.optim_kwargs)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optim,
-            gamma=0.99,
-        )
-        return [optim], [scheduler]
+        return [self.optim], [self.scheduler]
