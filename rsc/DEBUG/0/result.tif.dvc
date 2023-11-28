@@ -1,9 +1,0 @@
-outs:
-- md5: c700d23b1332113e74051d0b0d187d6e
-  size: 60154
-  hash: md5
-  path: result.tif
-  cloud:
-    frdc-scan:
-      etag: 08cbecf3a6dde582031001
-      version_id: '1701141332948555'

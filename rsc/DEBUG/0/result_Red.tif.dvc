@@ -1,9 +1,0 @@
-outs:
-- md5: f566accc812ae46a0147b0078d0f4411
-  size: 60134
-  hash: md5
-  path: result_Red.tif
-  cloud:
-    frdc-scan:
-      etag: 089bf8f9a6dde582031001
-      version_id: '1701141333048347'

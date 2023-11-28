@@ -1,9 +1,0 @@
-outs:
-- md5: ab998dba488a0fd7c362fab04c1b4034
-  size: 60134
-  hash: md5
-  path: result_RedEdge.tif
-  cloud:
-    frdc-scan:
-      etag: 08c7dbf9a6dde582031001
-      version_id: '1701141333044679'

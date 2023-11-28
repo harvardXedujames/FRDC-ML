@@ -1,9 +1,0 @@
-outs:
-- md5: ad253d8dfe0cbbc8107647b11d9a2ce2
-  size: 325
-  hash: md5
-  path: bounds.csv
-  cloud:
-    frdc-scan:
-      etag: 08c8fcf7a6dde582031001
-      version_id: '1701141333016136'

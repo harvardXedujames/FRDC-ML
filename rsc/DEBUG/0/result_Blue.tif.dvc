@@ -1,9 +1,0 @@
-outs:
-- md5: 663cb540356deb8811d0b779e4435bf5
-  size: 60134
-  hash: md5
-  path: result_Blue.tif
-  cloud:
-    frdc-scan:
-      etag: 08e9def9a6dde582031001
-      version_id: '1701141333045097'
