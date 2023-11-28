@@ -101,12 +101,13 @@ m = FRDCModule(
     # Our model is the "FaceNet" model
     # TODO: It's not really the FaceNet model,
     #  but a modified version of it.
-    model_cls=InceptionV3,
-    model_kwargs=dict(n_out_classes=len(set(labels))),
+    model_f=lambda: InceptionV3(n_out_classes=len(set(labels))),
     # We use the Adam optimizer
-    optim_cls=torch.optim.Adam,
-    # TODO: This is not fine-tuned.
-    optim_kwargs=dict(lr=LR, weight_decay=1e-4, amsgrad=True),
+    optim_f=lambda model: torch.optim.Adam(model.parameters(), lr=LR),
+    scheduler_f=lambda optim: torch.optim.lr_scheduler.ExponentialLR(
+        optimizer=optim,
+        gamma=0.99,
+    ),
 )
 
 trainer.fit(m, datamodule=dm)
