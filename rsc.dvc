@@ -9,6 +9,13 @@ outs:
       frdc-ds:
         etag: 08b6ab869c8de682031001
         version_id: '1701154195084726'
+  - relpath: DEBUG/0/result.jpg
+    md5: 36e390821a45f70fc442bbd5d881f495
+    size: 7361
+    cloud:
+      frdc-ds:
+        etag: 08ccc6cc8191e682031001
+        version_id: '1701155213353804'
   - relpath: DEBUG/0/result.tif
     md5: c700d23b1332113e74051d0b0d187d6e
     size: 60154
@@ -65,6 +72,13 @@ outs:
       frdc-ds:
         etag: 08ceb6879c8de682031001
         version_id: '1701154195102542'
+  - relpath: casuarina/20220418/183deg/result.jpg
+    md5: ceae7eab3f8a39485e3b4f5c5b7d47b3
+    size: 13379694
+    cloud:
+      frdc-ds:
+        etag: 08be83e98191e682031001
+        version_id: '1701155213820350'
   - relpath: casuarina/20220418/183deg/result.tif
     md5: e355405f060d55a6b7374b3542fdc3c1
     size: 197880775
@@ -128,6 +142,13 @@ outs:
       frdc-ds:
         etag: 08c798869c8de682031001
         version_id: '1701154195082311'
+  - relpath: casuarina/20220418/93deg/result.jpg
+    md5: e0f493e7704cf377b4f41132313950d1
+    size: 13131131
+    cloud:
+      frdc-ds:
+        etag: 08bffae48191e682031001
+        version_id: '1701155213753663'
   - relpath: casuarina/20220418/93deg/result.tif
     md5: 83feb031787b457f5017db9acdebf625
     size: 195394032
@@ -261,6 +282,13 @@ outs:
       frdc-ds:
         etag: 08f691869c8de682031001
         version_id: '1701154195081462'
+  - relpath: chestnut_nature_park/20210510/90deg43m85pct255deg/result.jpg
+    md5: d012b232cc1faed2871ebf5150d20cc1
+    size: 6941116
+    cloud:
+      frdc-ds:
+        etag: 08cfbae38191e682031001
+        version_id: '1701155213729103'
   - relpath: chestnut_nature_park/20210510/90deg43m85pct255deg/result.tif
     md5: 43541fa1f15171ba8548fb9b6ae77cfe
     size: 103859274
@@ -324,6 +352,13 @@ outs:
       frdc-ds:
         etag: 089e95869c8de682031001
         version_id: '1701154195081886'
+  - relpath: chestnut_nature_park/20210510/90deg60m84.5pct255deg/result.jpg
+    md5: cfc21b5bf466b57e888733f37d922017
+    size: 3243560
+    cloud:
+      frdc-ds:
+        etag: 08edc4db8191e682031001
+        version_id: '1701155213599341'
   - relpath: chestnut_nature_park/20210510/90deg60m84.5pct255deg/result.tif
     md5: 6b99351bd16f05fafc2f96e2945ec094
     size: 51407149
