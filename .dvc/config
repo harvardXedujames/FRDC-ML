@@ -1,0 +1,5 @@
+ [core]
+    remote = frdc-scan
+['remote "frdc-scan"']
+    url = gs://frdc-scan/dvc/
+    version_aware = true
