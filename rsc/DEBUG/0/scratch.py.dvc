@@ -3,3 +3,7 @@ outs:
   size: 352
   hash: md5
   path: scratch.py
+  cloud:
+    frdc-scan:
+      etag: 08aac5f9a6dde582031001
+      version_id: '1701141333041834'

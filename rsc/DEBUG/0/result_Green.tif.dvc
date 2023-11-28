@@ -3,3 +3,7 @@ outs:
   size: 60134
   hash: md5
   path: result_Green.tif
+  cloud:
+    frdc-scan:
+      etag: 08c2f2fca6dde582031001
+      version_id: '1701141333096770'
