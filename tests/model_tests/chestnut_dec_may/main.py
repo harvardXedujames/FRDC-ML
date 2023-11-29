@@ -113,8 +113,6 @@ m = FRDCModule(
 )
 
 trainer.fit(m, datamodule=dm)
-# TODO: Quite hacky, but we need to save the label encoder for prediction.
-np.save("le.npy", dm.le.classes_)
 
 # report = f"""
 # # Chestnut Nature Park (Dec 2020 vs May 2021)
