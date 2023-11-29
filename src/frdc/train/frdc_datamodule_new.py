@@ -6,21 +6,15 @@ from typing import Callable, Any
 import numpy as np
 import torch
 from lightning import LightningDataModule
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from torch.utils.data import DataLoader, Dataset, Subset, RandomSampler
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 from torchvision.transforms.v2 import (
-    RandomCrop,
     Compose,
-    RandomHorizontalFlip,
-    RandomVerticalFlip,
     ToImage,
     ToDtype,
-    Resize,
 )
 
 from frdc.load import FRDCDataset
-from frdc.load.dataset import FRDCConcatDataset
 
 ToTensor = Compose([ToImage(), ToDtype(torch.float32, scale=True)])
 
@@ -28,8 +22,11 @@ ToTensor = Compose([ToImage(), ToDtype(torch.float32, scale=True)])
 @dataclass
 class Transforms:
     train_tf: Callable[[np.ndarray], Any] = ToTensor
+    train_target_tf: Callable[[np.ndarray], Any] = lambda x: x
     val_tf: Callable[[np.ndarray], Any] = ToTensor
+    val_target_tf: Callable[[np.ndarray], Any] = lambda x: x
     test_tf: Callable[[np.ndarray], Any] = ToTensor
+    test_target_tf: Callable[[np.ndarray], Any] = lambda x: x
 
 
 class DatasetTransform(Dataset):
@@ -37,6 +34,9 @@ class DatasetTransform(Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.ds = ds
+
+    def __len__(self):
+        return len(self.ds)
 
     def __getitem__(self, idx):
         x, y = self.ds[idx]
@@ -70,48 +70,31 @@ class FRDCDataModule(LightningDataModule):
 
     """
 
-    ds: FRDCDataset | FRDCConcatDataset
+    train_ds: FRDCDataset
+    val_ds: FRDCDataset
     transforms: Transforms
     batch_size: int = 4
     train_iters: int = 100
     val_iters: int = 100
 
     le: LabelEncoder = field(init=False, default=LabelEncoder())
-    train_ds: Dataset = field(init=False, default=None)
-    val_ds: Dataset = field(init=False, default=None)
-
-    # train_val_test_split: (
-    #         Callable[[Dataset], Collection[Dataset, Dataset, Dataset]] | None
-    # )
-
-    # test_ds: Dataset = field(init=False, default=None)
-    # predict_ds: Dataset = field(init=False, default=None)
 
     def __post_init__(self):
         super().__init__()
 
     def setup(self, stage: str) -> None:
-        self.le.fit(self.ds.targets)
         # TODO: We'll figure out the test set later.
         #       Our dataset is way too small, even if we create one, it'll
         #       be too small to be useful.
-
-        train_ix, val_ix = train_test_split(
-            np.arange(len(self.ds)), test_size=0.1, random_state=42
+        self.train_ds = DatasetTransform(
+            self.train_ds,
+            self.transforms.train_tf,
+            self.transforms.train_target_tf,
         )
-        self.train_ds = Subset(
-            DatasetTransform(
-                self.ds,
-                self.transforms.train_tf,
-                self.le.transform,
-            ),
-            train_ix,
-        )
-        self.val_ds = Subset(
-            DatasetTransform(
-                self.ds, self.transforms.val_tf, self.le.transform
-            ),
-            val_ix,
+        self.val_ds = DatasetTransform(
+            self.val_ds,
+            self.transforms.val_tf,
+            self.transforms.val_target_tf,
         )
 
     def train_dataloader(self):
