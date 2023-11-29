@@ -13,6 +13,7 @@ import pandas as pd
 from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
+from torch.utils.data import Dataset, ConcatDataset
 
 from frdc.conf import (
     LOCAL_DATASET_ROOT_DIR,
@@ -20,6 +21,7 @@ from frdc.conf import (
     GCS_BUCKET_NAME,
     BAND_CONFIG,
 )
+from frdc.preprocess.extract_segments import extract_segments_from_bounds
 from frdc.utils import Rect
 
 
@@ -147,11 +149,46 @@ class FRDCDownloader:
 
 
 @dataclass
-class FRDCDataset:
-    site: str
-    date: str
-    version: str | None
-    dl: FRDCDownloader = field(default_factory=FRDCDownloader)
+class FRDCDataset(Dataset):
+    def __init__(
+        self,
+        site: str,
+        date: str,
+        version: str | None,
+        transform=None,
+        target_transform=None,
+    ):
+        """Initializes the FRDC Dataset.
+
+        Args:
+            site: The site of the dataset, e.g. "chestnut_nature_park".
+            date: The date of the dataset, e.g. "20201218".
+            version: The version of the dataset, e.g. "183deg".
+        """
+        self.site = site
+        self.date = date
+        self.version = version
+
+        self.dl = FRDCDownloader()
+
+        self.ar, self.order = self.get_ar_bands()
+        bounds, self.targets = self.get_bounds_and_labels()
+        self.data = extract_segments_from_bounds(self.ar, bounds)
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return (
+            self.transform(self.data[idx])
+            if self.transform
+            else self.data[idx],
+            self.target_transform(self.targets[idx])
+            if self.target_transform
+            else self.targets[idx],
+        )
 
     @staticmethod
     def _load_debug_dataset() -> FRDCDataset:
@@ -289,3 +326,17 @@ class FRDCDataset:
         im = Image.open(Path(path).as_posix())
         ar = np.array(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
+
+
+class FRDCConcatDataset(ConcatDataset):
+    def __init__(self, datasets: list[FRDCDataset]):
+        super().__init__(datasets)
+        self.datasets = datasets
+
+    def __getitem__(self, idx):
+        x, y = super().__getitem__(idx)
+        return x, y
+
+    @property
+    def targets(self):
+        return [t for ds in self.datasets for t in ds.targets]
