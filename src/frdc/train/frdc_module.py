@@ -62,9 +62,13 @@ class FRDCModule(LightningModule):
         return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
-        x = batch[0]
+        x, y = batch
         y_hat = self(x)
-        return self.le.inverse_transform(y_hat.argmax(dim=1))
+        return (
+            # Return the Truth, Predicted, in that order.
+            self.le.inverse_transform(y.cpu().numpy()[..., 0]),
+            self.le.inverse_transform(y_hat.argmax(dim=1).cpu().numpy()),
+        )
 
     def configure_optimizers(self):
         return [self.optim], [self.scheduler]
