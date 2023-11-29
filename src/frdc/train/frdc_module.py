@@ -10,25 +10,29 @@ class FRDCModule(LightningModule):
     def __init__(
         self,
         *,
-        model_f: Callable[[], nn.Module],
-        optim_f: Callable[[nn.Module], torch.optim.Optimizer],
+        model: nn.Module,
+        optim_f: Callable[[nn.Module], torch.optim.Optimizer] = None,
         scheduler_f: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
-        ],
+        ] = None,
         le: LabelEncoder,
     ):
         super().__init__()
         self.save_hyperparameters(
             ignore=[
-                "model_f",
                 "optim_f",
                 "scheduler_f",
             ]
         )
-        self.model = model_f()
-        self.optim = optim_f(self.model)
-        self.scheduler = scheduler_f(self.optim)
+        self.model = model
+        self.optim_f = optim_f
+        self.scheduler_f = scheduler_f
         self.le = le
+
+    def setup(self, stage: str) -> None:
+        if stage == "fit":
+            self.optim = self.optim_f(self.model)
+            self.scheduler = self.scheduler_f(self.optim)
 
     def forward(self, x):
         return self.model(x)
