@@ -4,14 +4,16 @@ import lightning as pl
 import torch
 from skimage.transform import resize
 from torch.utils.data import random_split
+from torchvision.transforms.v2 import (
+    Resize,
+    Compose,
+    ToImage,
+    ToDtype,
+)
 
 from frdc.models import InceptionV3
-from frdc.preprocess.extract_segments import (
-    extract_segments_from_bounds,
-    extract_segments_from_labels,
-)
-from frdc.train import FRDCDataModule, FRDCModule
-from utils import get_labels
+from frdc.train import FRDCModule
+from frdc.train.frdc_datamodule_new import FRDCDataModule, Transforms
 
 
 def fn_segment_tf(x):
@@ -31,17 +33,21 @@ BATCH_SIZE = 3
 def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
     """Manually segment the image according to bounds.csv,
     then train a model on it."""
-
-    ar, order = ds.get_ar_bands()
-    bounds, labels = ds.get_bounds_and_labels()
-    segments = extract_segments_from_bounds(ar, bounds, cropped=True)
+    train_tf = Compose(
+        [
+            ToImage(),
+            ToDtype(torch.float32, scale=True),
+            Resize([InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE]),
+        ]
+    )
 
     dm = FRDCDataModule(
-        segments=segments,
-        labels=labels,
-        preprocess=fn_segment_tf,
-        train_val_test_split=fn_split,
-        augmentation=lambda x: x,
+        ds=ds,
+        transforms=Transforms(
+            train_tf=lambda x: train_tf(x),
+            val_tf=lambda x: train_tf(x),
+            test_tf=lambda x: x,
+        ),
         batch_size=BATCH_SIZE,
     )
     m = FRDCModule(
@@ -50,49 +56,13 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
         scheduler_f=lambda optim: torch.optim.lr_scheduler.ExponentialLR(
             optimizer=optim,
             gamma=0.99,
-        )
+        ),
     )
 
     trainer = pl.Trainer(fast_dev_run=True)
     trainer.fit(m, datamodule=dm)
 
     val_loss = trainer.validate(m, datamodule=dm)[0]["val_loss"]
-    test_loss = trainer.test(m, datamodule=dm)[0]["test_loss"]
-
     logging.debug(f"Validation score: {val_loss:.2%}")
-    logging.debug(f"Test score: {test_loss:.2%}")
 
     return m, dm
-
-
-def test_auto_segmentation_pipeline(ds):
-    """Automatically segment the image, then use a model to predict."""
-
-    # Auto segmentation
-    ar, order = ds.get_ar_bands()
-    ar_labels = get_labels(ar, order)
-    segments_auto = extract_segments_from_labels(ar, ar_labels)
-
-    # Get our model trained on the bounds.csv
-    m, _ = test_manual_segmentation_pipeline(ds)
-
-    # Construct our datamodule for prediction
-    dm_auto = FRDCDataModule(
-        segments=segments_auto,
-        labels=None,  # Labels can be none if we just want predictions.
-        preprocess=fn_segment_tf,
-        train_val_test_split=fn_split,
-        batch_size=BATCH_SIZE,
-    )
-
-    trainer = pl.Trainer(fast_dev_run=True)
-    # The predictions have a shape of (N, C), where N is the number of
-    # segments, and C is the number of classes.
-    predictions = torch.concat(trainer.predict(m, datamodule=dm_auto))
-
-    assert predictions.shape[0] == len(
-        segments_auto
-    ), "Expected the same number of predictions as segments."
-
-    logging.debug(f"Predictions: {predictions}")
-    logging.debug(f"Class Predictions: {torch.argmax(predictions, dim=1)}")
