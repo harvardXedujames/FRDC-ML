@@ -6,7 +6,7 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Callable, Any
 
 import numpy as np
 import pandas as pd
@@ -155,8 +155,8 @@ class FRDCDataset(Dataset):
         site: str,
         date: str,
         version: str | None,
-        transform=None,
-        target_transform=None,
+        transform: Callable[[list[np.ndarray]], list[np.ndarray]] = None,
+        target_transform: Callable[[list[str]], list[str]] = None,
     ):
         """Initializes the FRDC Dataset.
 
@@ -174,21 +174,17 @@ class FRDCDataset(Dataset):
         self.ar, self.order = self.get_ar_bands()
         bounds, self.targets = self.get_bounds_and_labels()
         self.data = extract_segments_from_bounds(self.ar, bounds)
-        self.transform = transform
-        self.target_transform = target_transform
+
+        if transform:
+            self.data = transform(self.data)
+        if target_transform:
+            self.targets = target_transform(self.targets)
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return (
-            self.transform(self.data[idx])
-            if self.transform
-            else self.data[idx],
-            self.target_transform(self.targets[idx])
-            if self.target_transform
-            else self.targets[idx],
-        )
+        return self.data[idx], self.targets[idx]
 
     @staticmethod
     def _load_debug_dataset() -> FRDCDataset:
@@ -332,6 +328,7 @@ class FRDCConcatDataset(ConcatDataset):
     def __init__(self, datasets: list[FRDCDataset]):
         super().__init__(datasets)
         self.datasets = datasets
+        #
 
     def __getitem__(self, idx):
         x, y = super().__getitem__(idx)
