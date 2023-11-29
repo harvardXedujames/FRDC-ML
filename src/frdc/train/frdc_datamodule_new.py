@@ -8,7 +8,7 @@ import torch
 from lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader, Dataset, Subset, RandomSampler
 from torchvision.transforms.v2 import (
     RandomCrop,
     Compose,
@@ -73,6 +73,8 @@ class FRDCDataModule(LightningDataModule):
     ds: FRDCDataset | FRDCConcatDataset
     transforms: Transforms
     batch_size: int = 4
+    train_iters: int = 100
+    val_iters: int = 100
 
     le: LabelEncoder = field(init=False, default=LabelEncoder())
     train_ds: Dataset = field(init=False, default=None)
@@ -116,55 +118,20 @@ class FRDCDataModule(LightningDataModule):
         return DataLoader(
             self.train_ds,
             batch_size=self.batch_size,
-            shuffle=True,
+            sampler=RandomSampler(
+                self.train_ds,
+                num_samples=self.batch_size * self.train_iters,
+                replacement=False,
+            ),
         )
 
     def val_dataloader(self):
         return DataLoader(
-            self.val_ds, batch_size=self.batch_size, shuffle=False
+            self.val_ds,
+            batch_size=self.batch_size,
+            sampler=RandomSampler(
+                self.val_ds,
+                num_samples=self.batch_size * self.val_iters,
+                replacement=False,
+            ),
         )
-
-
-#
-# # %%
-#
-# ds = FRDCDataset(
-#     site="chestnut_nature_park",
-#     date="20201218",
-#     version=None,
-# )
-#
-#
-# # %%
-#
-# train_tf = Compose(
-#     [
-#         ToImage(),
-#         ToDtype(torch.float32, scale=True),
-#         RandomCrop(100, pad_if_needed=True, padding_mode="reflect"),
-#         RandomHorizontalFlip(),
-#         RandomVerticalFlip(),
-#     ]
-# )
-#
-#
-# dl = FRDCDataModule(
-#     ds=ds,
-#     transforms=Transforms(
-#         train_tf=lambda x: (train_tf(x), train_tf(x)),
-#         val_tf=Compose(
-#             [
-#                 ToImage(),
-#                 ToDtype(torch.float32, scale=True),
-#                 Resize(100),
-#                 RandomHorizontalFlip(),
-#                 RandomVerticalFlip(),
-#             ]
-#         ),
-#         test_tf=lambda x: x,
-#     ),
-# )
-# dl.setup("fit")
-# for i in dl.train_dataloader():
-#     (i)
-#     break
