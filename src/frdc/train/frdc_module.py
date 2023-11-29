@@ -16,7 +16,13 @@ class FRDCModule(LightningModule):
         ],
     ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(
+            ignore=[
+                "model_f",
+                "optim_f",
+                "scheduler_f",
+            ]
+        )
         self.model = model_f()
         self.optim = optim_f(self.model)
         self.scheduler = scheduler_f(self.optim)
