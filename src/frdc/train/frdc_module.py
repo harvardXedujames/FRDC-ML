@@ -7,11 +7,13 @@ from torch import nn
 
 class FRDCModule(LightningModule):
     def __init__(
-            self,
-            *,
-            model_f: Callable[[], nn.Module],
-            optim_f: Callable[[nn.Module], torch.optim.Optimizer],
-            scheduler_f: Callable[[torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler],
+        self,
+        *,
+        model_f: Callable[[], nn.Module],
+        optim_f: Callable[[nn.Module], torch.optim.Optimizer],
+        scheduler_f: Callable[
+            [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
+        ],
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -25,7 +27,7 @@ class FRDCModule(LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        loss = nn.CrossEntropyLoss()(y_hat, y)
+        loss = nn.CrossEntropyLoss()(y_hat, y.squeeze().long())
         self.log("loss", loss, prog_bar=True)
         self.log(
             "acc", (y_hat.argmax(dim=1) == y).float().mean(), prog_bar=True
@@ -35,7 +37,7 @@ class FRDCModule(LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        loss = nn.CrossEntropyLoss()(y_hat, y)
+        loss = nn.CrossEntropyLoss()(y_hat, y.squeeze().long())
         self.log("val_loss", loss)
         self.log(
             "val_acc", (y_hat.argmax(dim=1) == y).float().mean(), prog_bar=True
