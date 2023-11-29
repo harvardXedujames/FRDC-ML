@@ -2,6 +2,7 @@ from typing import Callable
 
 import torch
 from lightning import LightningModule
+from sklearn.preprocessing import LabelEncoder
 from torch import nn
 
 
@@ -14,6 +15,7 @@ class FRDCModule(LightningModule):
         scheduler_f: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
         ],
+        le: LabelEncoder,
     ):
         super().__init__()
         self.save_hyperparameters(
@@ -26,6 +28,7 @@ class FRDCModule(LightningModule):
         self.model = model_f()
         self.optim = optim_f(self.model)
         self.scheduler = scheduler_f(self.optim)
+        self.le = le
 
     def forward(self, x):
         return self.model(x)
@@ -61,7 +64,7 @@ class FRDCModule(LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         x = batch[0]
         y_hat = self(x)
-        return y_hat
+        return self.le.inverse_transform(y_hat.argmax(dim=1))
 
     def configure_optimizers(self):
         return [self.optim], [self.scheduler]
