@@ -23,7 +23,7 @@ from torchvision.transforms.v2 import (
     ToDtype,
     RandomHorizontalFlip,
     Normalize,
-    Resize,
+    RandomCrop,
 )
 
 from frdc.load import FRDCDataset
@@ -33,11 +33,11 @@ from frdc.train import FRDCModule
 from frdc.train.frdc_datamodule_new import FRDCDataModule, Transforms
 
 os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
-# assert wandb.run is None
-#
-# wandb.setup(wandb.Settings(program=__name__, program_relpath=__name__))
-# run = wandb.init()
-# logger = WandbLogger(name="chestnut_dec_may", project="frdc")
+assert wandb.run is None
+
+wandb.setup(wandb.Settings(program=__name__, program_relpath=__name__))
+run = wandb.init()
+logger = WandbLogger(name="chestnut_dec_may", project="frdc")
 
 # Prepare the dataset
 ds0 = FRDCDataset(
@@ -48,14 +48,17 @@ ds0 = FRDCDataset(
 ds1 = FRDCDataset(
     "chestnut_nature_park", "20210510", "90deg43m85pct255deg/map"
 )
-mean = np.nanmean(ds0.ar, axis=(0, 1))
-std = np.nanstd(ds0.ar, axis=(0, 1))
 
 ds = FRDCConcatDataset([ds0, ds1])
+n_classes = len(set(ds.targets))
 
-BATCH_SIZE = 5
+BATCH_SIZE = 32
 EPOCHS = 50
-LR = 1e-3
+
+# We only use the mean and std of the train set. This is to simulate blind
+# testing.
+mean = np.nanmean(ds0.ar, axis=(0, 1))
+std = np.nanstd(ds0.ar, axis=(0, 1))
 
 
 def tf(x):
@@ -63,8 +66,11 @@ def tf(x):
         [
             ToImage(),
             ToDtype(torch.float32, scale=True),
-            Resize(
-                [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE], antialias=True
+            RandomCrop(
+                [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE],
+                pad_if_needed=True,
+                padding_mode="constant",
+                fill=0,
             ),
             RandomHorizontalFlip(),
             RandomVerticalFlip(),
@@ -81,16 +87,17 @@ dm = FRDCDataModule(
         val_tf=tf,
     ),
     batch_size=BATCH_SIZE,
+    train_iters=25,
+    val_iters=25,
 )
-# %%
+
+LR = 1e-3
 trainer = pl.Trainer(
     max_epochs=EPOCHS,
-    # fast_dev_run=True,
     # Set the seed for reproducibility
     # TODO: Though this is set, the results are still not reproducible.
     deterministic=True,
-    # fast_dev_run=True,
-    # accelerator="gpu",
+    accelerator="gpu",
     log_every_n_steps=4,
     callbacks=[
         # Stop training if the validation loss doesn't improve for 4 epochs
@@ -100,27 +107,27 @@ trainer = pl.Trainer(
         # Save the best model
         ModelCheckpoint(monitor="val_loss", mode="min", save_top_k=1),
     ],
-    # logger=logger,
+    logger=logger,
 )
-
 m = FRDCModule(
-    model_f=lambda: InceptionV3(n_out_classes=len(set(ds.targets))),
+    model_f=lambda: InceptionV3(n_out_classes=n_classes),
     optim_f=lambda model: torch.optim.Adam(model.parameters(), lr=LR),
     scheduler_f=lambda optim: torch.optim.lr_scheduler.ExponentialLR(
         optimizer=optim,
-        gamma=0.99,
+        gamma=1,
     ),
+    le=dm.le,
 )
 
 trainer.fit(m, datamodule=dm)
 
-# report = f"""
-# # Chestnut Nature Park (Dec 2020 vs May 2021)
-# [WandB Report]({run.get_url()})
-# TODO: Authentication for researchers
-# """
-#
-# with open(Path(__file__).parent / "report.md", "w") as f:
-#     f.write(report)
-#
-# wandb.finish()
+report = f"""
+# Chestnut Nature Park (Dec 2020 vs May 2021)
+[WandB Report]({run.get_url()})
+TODO: Authentication for researchers
+"""
+
+with open(Path(__file__).parent / "report.md", "w") as f:
+    f.write(report)
+
+wandb.finish()
