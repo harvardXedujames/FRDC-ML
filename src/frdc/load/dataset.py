@@ -10,10 +10,18 @@ from typing import Iterable, Callable
 
 import numpy as np
 import pandas as pd
+import torch
 from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
 from torch.utils.data import Dataset, ConcatDataset
+from torchvision.transforms.v2 import (
+    Compose,
+    ToImage,
+    ToDtype,
+    CenterCrop,
+    Resize,
+)
 
 from frdc.conf import (
     LOCAL_DATASET_ROOT_DIR,
@@ -191,14 +199,26 @@ class FRDCDataset(Dataset):
         )
 
     @staticmethod
-    def _load_debug_dataset() -> FRDCDataset:
+    def _load_debug_dataset(resize: int = 299) -> FRDCDataset:
         """Loads a debug dataset from Google Cloud Storage.
 
         Returns:
             A dictionary of the dataset, with keys as the filenames and values
             as the images.
         """
-        return FRDCDataset(site="DEBUG", date="0", version=None)
+        return FRDCDataset(
+            site="DEBUG",
+            date="0",
+            version=None,
+            transform=Compose(
+                [
+                    ToImage(),
+                    ToDtype(torch.float32),
+                    Resize((resize, resize)),
+                ]
+            ),
+            target_transform=None,
+        )
 
     @property
     def dataset_dir(self):
