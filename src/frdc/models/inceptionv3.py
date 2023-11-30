@@ -1,16 +1,21 @@
+from abc import ABC
+from dataclasses import dataclass
+
 import torch
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
+from frdc.train import FRDCModule
 
-class InceptionV3(nn.Module):
+
+class InceptionV3(FRDCModule, ABC):
     INCEPTION_OUT_DIMS = 2048
     INCEPTION_AUX_DIMS = 1000
     INCEPTION_IN_CHANNELS = 3
     MIN_SIZE = 299
 
-    def __init__(self, n_out_classes: int = 10):
-        """Initialize the FaceNet model.
+    def __init__(self, *, n_out_classes: int):
+        """Initialize the InceptionV3 model.
 
         Args:
             n_out_classes: The number of output classes
@@ -21,6 +26,7 @@ class InceptionV3(nn.Module):
 
             Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
         """
+
         super().__init__()
 
         self.inception = inception_v3(
@@ -62,7 +68,6 @@ class InceptionV3(nn.Module):
                 f" - No singleton dimensions\n"
                 f" - Size >= {self.MIN_SIZE}\n"
             )
-        # x = self.feature_extraction(x)
 
         # During training, the auxiliary outputs are used for auxiliary loss,
         # but during testing, only the main output is used.
