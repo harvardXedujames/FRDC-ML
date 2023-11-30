@@ -1,41 +1,52 @@
+import os
+from pathlib import Path
+
 import lightning as pl
 import numpy as np
 from matplotlib import pyplot as plt
 from seaborn import heatmap
 from sklearn.metrics import confusion_matrix
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader
 from torchvision.transforms import RandomVerticalFlip
-from torchvision.transforms.v2 import Compose, RandomHorizontalFlip
+from torchvision.transforms.v2 import RandomHorizontalFlip
 
 from frdc.load import FRDCDataset
-from model_tests.chestnut_dec_may.main import InceptionV3Module, preprocess
+from model_tests.chestnut_dec_may.train import InceptionV3Module, preprocess
 
-# Get our Test
+
 # TODO: Ideally, we should have a separate dataset for testing.
 
 
-def get_ds(h_flip, v_flip):
-    return FRDCDataset(
-        "chestnut_nature_park",
-        "20210510",
-        "90deg43m85pct255deg/map",
-        transform=Compose(
-            [
-                preprocess,
-                RandomHorizontalFlip(p=h_flip),
-                RandomVerticalFlip(p=v_flip),
-            ]
-        ),
-    )
+# TODO: This is pretty hacky, I'm not sure if there's a better way to do this.
+#       Note that initializing datasets separately then concatenating them
+#       together is 4x slower than initializing a dataset then hacking into
+#       the __getitem__ method.
+class FRDCDatasetFlipped(FRDCDataset):
+    def __len__(self):
+        return super().__len__() * 4
+
+    def __getitem__(self, idx):
+        x, y = super().__getitem__(int(idx // 4))
+        if idx % 4 == 0:
+            return x, y
+        elif idx % 4 == 1:
+            return RandomHorizontalFlip(p=1)(x), y
+        elif idx % 4 == 2:
+            return RandomVerticalFlip(p=1)(x), y
+        elif idx % 4 == 3:
+            return RandomHorizontalFlip(p=1)(RandomVerticalFlip(p=1)(x)), y
 
 
 def main():
-    ds = ConcatDataset(
-        [get_ds(0, 0), get_ds(1, 0), get_ds(0, 1), get_ds(1, 1)]
+    ds = FRDCDatasetFlipped(
+        "chestnut_nature_park",
+        "20210510",
+        "90deg43m85pct255deg/map",
+        transform=preprocess,
     )
 
     m = InceptionV3Module.load_from_checkpoint(
-        "lightning_logs/version_20/checkpoints/epoch=10-step=1100.ckpt"
+        Path("frdc/c6kaezm8/checkpoints/epoch=1-step=100.ckpt")
     )
     # Make predictions
     trainer = pl.Trainer()
@@ -62,12 +73,12 @@ def main():
         cbar=False,
     )
     plt.title(f"Accuracy: {acc:.2%}")
-
-    plt.tight_layout()
+    plt.tight_layout(pad=3)
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
     plt.savefig("confusion_matrix.png")
 
 
 if __name__ == "__main__":
+    os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
     main()
