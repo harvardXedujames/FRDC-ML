@@ -72,8 +72,6 @@ class InceptionV3Module(InceptionV3):
         y_encoder: OrdinalEncoder,
     ):
         self.lr = lr
-        self.ss = x_scaler
-        self.oe = y_encoder
         super().__init__(
             n_out_classes=n_out_classes,
             x_scaler=x_scaler,
