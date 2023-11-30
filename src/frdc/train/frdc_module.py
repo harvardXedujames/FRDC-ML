@@ -1,41 +1,13 @@
-from typing import Callable
+from abc import abstractmethod
 
-import torch
 from lightning import LightningModule
-from sklearn.preprocessing import LabelEncoder
 from torch import nn
 
 
 class FRDCModule(LightningModule):
-    def __init__(
-        self,
-        *,
-        model: nn.Module,
-        optim_f: Callable[[nn.Module], torch.optim.Optimizer] = None,
-        scheduler_f: Callable[
-            [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
-        ] = None,
-        le: LabelEncoder,
-    ):
+    def __init__(self):
         super().__init__()
-        self.save_hyperparameters(
-            ignore=[
-                "optim_f",
-                "scheduler_f",
-            ]
-        )
-        self.model = model
-        self.optim_f = optim_f
-        self.scheduler_f = scheduler_f
-        self.le = le
-
-    def setup(self, stage: str) -> None:
-        if stage == "fit":
-            self.optim = self.optim_f(self.model)
-            self.scheduler = self.scheduler_f(self.optim)
-
-    def forward(self, x):
-        return self.model(x)
+        self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -68,11 +40,12 @@ class FRDCModule(LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
         x, y = batch
         y_hat = self(x)
-        return (
-            # Return the Truth, Predicted, in that order.
-            self.le.inverse_transform(y.cpu().numpy()[..., 0]),
-            self.le.inverse_transform(y_hat.argmax(dim=1).cpu().numpy()),
-        )
+        return y, y_hat
 
+    @abstractmethod
+    def forward(self, x):
+        ...
+
+    @abstractmethod
     def configure_optimizers(self):
-        return [self.optim], [self.scheduler]
+        ...
