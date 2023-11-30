@@ -173,18 +173,22 @@ class FRDCDataset(Dataset):
 
         self.ar, self.order = self.get_ar_bands()
         bounds, self.targets = self.get_bounds_and_labels()
-        self.data = extract_segments_from_bounds(self.ar, bounds)
-
-        if transform:
-            self.data = transform(self.data)
-        if target_transform:
-            self.targets = target_transform(self.targets)
+        self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
+        self.transform = transform
+        self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.data)
+        return len(self.ar_segments)
 
     def __getitem__(self, idx):
-        return self.data[idx], self.targets[idx]
+        return (
+            self.transform(self.ar_segments[idx])
+            if self.transform
+            else self.ar_segments[idx],
+            self.target_transform(self.targets[idx])
+            if self.target_transform
+            else self.targets[idx],
+        )
 
     @staticmethod
     def _load_debug_dataset() -> FRDCDataset:
