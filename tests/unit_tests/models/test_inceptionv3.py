@@ -1,5 +1,6 @@
 import pytest
 import torch
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
 from frdc.models import InceptionV3
 
@@ -11,7 +12,11 @@ MIN_SIZE = InceptionV3.MIN_SIZE
 
 @pytest.fixture(scope="module")
 def inceptionv3():
-    return InceptionV3(n_out_classes=N_CLASSES)
+    return InceptionV3(
+        n_out_classes=N_CLASSES,
+        x_scaler=StandardScaler(),
+        y_encoder=OrdinalEncoder(),
+    )
 
 
 @pytest.mark.parametrize(
@@ -31,7 +36,7 @@ def inceptionv3():
         [BATCH_SIZE, 1, MIN_SIZE, False],
     ],
 )
-def test_facenet_io(inceptionv3, batch_size, channels, size, ok):
+def test_inceptionv3_io(inceptionv3, batch_size, channels, size, ok):
     def check(net, x):
         if ok:
             assert net(x).shape == (BATCH_SIZE, N_CLASSES)
@@ -47,9 +52,11 @@ def test_facenet_io(inceptionv3, batch_size, channels, size, ok):
     check(inceptionv3, x)
 
 
-def test_facenet_frozen(inceptionv3):
+def test_inception_frozen(inceptionv3):
     """Assert that the base model is frozen, and the rest is trainable."""
-    assert sum(p.numel() for p in inceptionv3.parameters() if p.requires_grad) > 0
+    assert (
+        sum(p.numel() for p in inceptionv3.parameters() if p.requires_grad) > 0
+    )
     assert (
         sum(
             p.numel()

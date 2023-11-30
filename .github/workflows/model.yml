@@ -2,6 +2,7 @@ name: Model Training
 
 on:
   pull_request:
+    branches: ['main']
 
 jobs:
   build:

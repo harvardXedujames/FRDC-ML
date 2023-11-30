@@ -137,3 +137,4 @@ class FRDCDataModule(LightningDataModule):
         return DataLoader(
             self.predict_ds, batch_size=self.batch_size, shuffle=False
         )
+
