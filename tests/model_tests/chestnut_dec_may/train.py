@@ -18,12 +18,12 @@ from lightning.pytorch.callbacks import (
 )
 from lightning.pytorch.loggers import WandbLogger
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
-from torchvision.transforms import RandomVerticalFlip
 from torchvision.transforms.v2 import (
     Compose,
     ToImage,
     ToDtype,
     RandomHorizontalFlip,
+    RandomVerticalFlip,
     RandomCrop,
     CenterCrop,
 )
@@ -116,7 +116,9 @@ class InceptionV3Module(InceptionV3):
         return x_, y_.long()
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optim = torch.optim.Adam(
+            self.parameters(), lr=self.lr, weight_decay=1e-4
+        )
         return optim
 
 
@@ -195,11 +197,11 @@ def main():
 if __name__ == "__main__":
     BATCH_SIZE = 32
     EPOCHS = 30
-    TRAIN_ITERS = 100
-    VAL_ITERS = 10
+    TRAIN_ITERS = 50
+    VAL_ITERS = 15
     LR = 1e-3
     os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
+
     assert wandb.run is None
-    #
     wandb.setup(wandb.Settings(program=__name__, program_relpath=__name__))
     main()
