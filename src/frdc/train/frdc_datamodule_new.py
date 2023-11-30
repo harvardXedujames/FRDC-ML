@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import torch
 from lightning import LightningDataModule
 from sklearn.preprocessing import LabelEncoder
-from torch.utils.data import DataLoader, Dataset, RandomSampler
+from torch.utils.data import DataLoader, RandomSampler
 from torchvision.transforms.v2 import (
     Compose,
     ToImage,
