@@ -1,53 +1,73 @@
 import lightning as pl
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
+from matplotlib import pyplot as plt
 from seaborn import heatmap
 from sklearn.metrics import confusion_matrix
+from torch.utils.data import DataLoader, ConcatDataset
+from torchvision.transforms import RandomVerticalFlip
+from torchvision.transforms.v2 import Compose, RandomHorizontalFlip
 
-from frdc.train import FRDCDataModule
-from frdc.train import FRDCModule
-from .preprocess import preprocess
-from tests.model_tests.utils import get_dataset
+from frdc.load import FRDCDataset
+from model_tests.chestnut_dec_may.main import InceptionV3Module, preprocess
 
 # Get our Test
 # TODO: Ideally, we should have a separate dataset for testing.
-segments, labels = get_dataset(
-    "chestnut_nature_park", "20210510", "90deg43m85pct255deg/map"
-)
 
-# Prepare the datamodule and trainer
-dm = FRDCDataModule(segments=segments, preprocess=preprocess, batch_size=5)
 
-# TODO: Hacky way to load our LabelEncoder
-dm.le.classes_ = np.load("le.npy", allow_pickle=True)
+def get_ds(h_flip, v_flip):
+    return FRDCDataset(
+        "chestnut_nature_park",
+        "20210510",
+        "90deg43m85pct255deg/map",
+        transform=Compose(
+            [
+                preprocess,
+                RandomHorizontalFlip(p=h_flip),
+                RandomVerticalFlip(p=v_flip),
+            ]
+        ),
+    )
 
-# Load the model
-m = FRDCModule.load_from_checkpoint(
-    "lightning_logs/version_88/checkpoints/epoch=99-step=700.ckpt"
-)
 
-# Make predictions
-trainer = pl.Trainer(logger=False)
-pred = trainer.predict(m, datamodule=dm)
-y_pred = torch.concat(pred, dim=0).argmax(dim=1)
-y_true = dm.le.transform(labels)
+def main():
+    ds = ConcatDataset(
+        [get_ds(0, 0), get_ds(1, 0), get_ds(0, 1), get_ds(1, 1)]
+    )
 
-# Plot the confusion matrix
-cm = confusion_matrix(y_true, y_pred)
+    m = InceptionV3Module.load_from_checkpoint(
+        "lightning_logs/version_20/checkpoints/epoch=10-step=1100.ckpt"
+    )
+    # Make predictions
+    trainer = pl.Trainer()
+    pred = trainer.predict(m, dataloaders=DataLoader(ds, batch_size=32))
+    y_trues = []
+    y_preds = []
+    for y_true, y_pred in pred:
+        y_trues.append(y_true)
+        y_preds.append(y_pred.argmax(dim=1))
+    y_trues = np.concatenate(y_trues)
+    y_preds = np.concatenate(y_preds)
+    acc = (y_trues == y_preds).mean()
 
-plt.figure(figsize=(10, 10))
+    # Plot the confusion matrix
+    cm = confusion_matrix(y_trues, y_preds)
 
-heatmap(
-    cm,
-    annot=True,
-    xticklabels=dm.le.classes_,
-    yticklabels=dm.le.classes_,
-    cbar=False,
-)
+    plt.figure(figsize=(10, 10))
 
-plt.tight_layout(pad=3)
-plt.title("Confusion Matrix")
-plt.xlabel("Predicted Label")
-plt.ylabel("True Label")
-plt.savefig("confusion_matrix.png")
+    heatmap(
+        cm,
+        annot=True,
+        xticklabels=m.oe.categories_[0],
+        yticklabels=m.oe.categories_[0],
+        cbar=False,
+    )
+    plt.title(f"Accuracy: {acc:.2%}")
+
+    plt.tight_layout()
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.savefig("confusion_matrix.png")
+
+
+if __name__ == "__main__":
+    main()
