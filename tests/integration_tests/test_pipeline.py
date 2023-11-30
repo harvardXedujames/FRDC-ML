@@ -2,18 +2,9 @@ import logging
 
 import lightning as pl
 import numpy as np
-import torch
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
-from torchvision.transforms.v2 import (
-    Resize,
-    Compose,
-    ToImage,
-    ToDtype,
-)
 
-from frdc.models import InceptionV3
-from frdc.train import FRDCModule
-from frdc.train.frdc_datamodule_new import FRDCDataModule
+from frdc.train import FRDCModule, FRDCDataModule
 from model_tests.chestnut_dec_may.train import InceptionV3Module
 
 BATCH_SIZE = 3
