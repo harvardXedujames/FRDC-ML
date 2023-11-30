@@ -6,7 +6,7 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Callable, Any
+from typing import Iterable, Callable
 
 import numpy as np
 import pandas as pd
@@ -324,7 +324,7 @@ class FRDCDataset(Dataset):
         """
 
         im = Image.open(Path(path).as_posix())
-        ar = np.array(im)
+        ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
 
 
