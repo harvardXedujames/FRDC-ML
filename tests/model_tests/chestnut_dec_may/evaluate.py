@@ -46,10 +46,10 @@ def main():
     )
 
     m = InceptionV3Module.load_from_checkpoint(
-        Path("frdc/c6kaezm8/checkpoints/epoch=1-step=100.ckpt")
+        Path("frdc/jz0devw6/checkpoints/epoch=5-step=300.ckpt")
     )
     # Make predictions
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(logger=False)
     pred = trainer.predict(m, dataloaders=DataLoader(ds, batch_size=32))
     y_trues = []
     y_preds = []
@@ -68,8 +68,8 @@ def main():
     heatmap(
         cm,
         annot=True,
-        xticklabels=m.oe.categories_[0],
-        yticklabels=m.oe.categories_[0],
+        xticklabels=m.y_encoder.categories_[0],
+        yticklabels=m.y_encoder.categories_[0],
         cbar=False,
     )
     plt.title(f"Accuracy: {acc:.2%}")

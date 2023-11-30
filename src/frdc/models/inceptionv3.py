@@ -2,6 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 
 import torch
+from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
@@ -14,7 +15,13 @@ class InceptionV3(FRDCModule, ABC):
     INCEPTION_IN_CHANNELS = 3
     MIN_SIZE = 299
 
-    def __init__(self, *, n_out_classes: int):
+    def __init__(
+        self,
+        *,
+        n_out_classes: int,
+        x_scaler: StandardScaler,
+        y_encoder: OrdinalEncoder,
+    ):
         """Initialize the InceptionV3 model.
 
         Args:
@@ -27,7 +34,7 @@ class InceptionV3(FRDCModule, ABC):
             Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
         """
 
-        super().__init__()
+        super().__init__(x_scaler=x_scaler, y_encoder=y_encoder)
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
