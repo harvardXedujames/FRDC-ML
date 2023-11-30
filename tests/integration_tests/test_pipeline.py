@@ -1,9 +1,9 @@
 import logging
 
 import lightning as pl
+import numpy as np
 import torch
-from skimage.transform import resize
-from torch.utils.data import random_split
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from torchvision.transforms.v2 import (
     Resize,
     Compose,
@@ -13,19 +13,8 @@ from torchvision.transforms.v2 import (
 
 from frdc.models import InceptionV3
 from frdc.train import FRDCModule
-from frdc.train.frdc_datamodule_new import FRDCDataModule, Transforms
-
-
-def fn_segment_tf(x):
-    x = [resize(s, [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE]) for s in x]
-    x = [torch.from_numpy(s) for s in x]
-    x = torch.stack(x)
-    x = torch.nan_to_num(x)
-    x = x.permute(0, 3, 1, 2)
-    return x
-
-
-fn_split = lambda x: random_split(x, lengths=[len(x) - 6, 3, 3])
+from frdc.train.frdc_datamodule_new import FRDCDataModule
+from model_tests.chestnut_dec_may.train import InceptionV3Module
 
 BATCH_SIZE = 3
 
@@ -33,30 +22,28 @@ BATCH_SIZE = 3
 def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
     """Manually segment the image according to bounds.csv,
     then train a model on it."""
-    train_tf = Compose(
-        [
-            ToImage(),
-            ToDtype(torch.float32, scale=True),
-            Resize([InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE]),
-        ]
-    )
 
     dm = FRDCDataModule(
-        ds=ds,
-        transforms=Transforms(
-            train_tf=lambda x: train_tf(x),
-            val_tf=lambda x: train_tf(x),
-            test_tf=lambda x: x,
-        ),
+        train_ds=ds,
+        val_ds=ds,
         batch_size=BATCH_SIZE,
     )
-    m = FRDCModule(
-        model_f=lambda: InceptionV3(n_out_classes=10),
-        optim_f=lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
-        scheduler_f=lambda optim: torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optim,
-            gamma=0.99,
-        ),
+
+    oe = OrdinalEncoder(
+        handle_unknown="use_encoded_value",
+        unknown_value=np.nan,
+    )
+    oe.fit(np.array(ds.targets).reshape(-1, 1))
+    n_classes = len(oe.categories_[0])
+
+    ss = StandardScaler()
+    ss.fit(ds.ar.reshape(-1, ds.ar.shape[-1]))
+
+    m = InceptionV3Module(
+        n_out_classes=n_classes,
+        lr=1e-3,
+        x_scaler=ss,
+        y_encoder=oe,
     )
 
     trainer = pl.Trainer(fast_dev_run=True)
