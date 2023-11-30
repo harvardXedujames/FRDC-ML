@@ -5,7 +5,6 @@ the 20210510 dataset.
 """
 import os
 from pathlib import Path
-from typing import Any
 
 import lightning as pl
 import numpy as np
@@ -30,7 +29,7 @@ from torchvision.transforms.v2 import (
 
 from frdc.load import FRDCDataset
 from frdc.models import InceptionV3
-from frdc.train.frdc_datamodule_new import FRDCDataModule
+from frdc.train import FRDCDataModule
 
 
 def preprocess(x):

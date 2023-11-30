@@ -62,7 +62,9 @@ class MixMatchModule(pl.LightningModule):
     # See our wiki for details on interleave
     interleave: bool = False
 
-    get_loss_lbl: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] = F.cross_entropy
+    get_loss_lbl: Callable[
+        [torch.Tensor, torch.Tensor], torch.Tensor
+    ] = F.cross_entropy
     # TODO: Not sure why this is different from MSELoss
     #  It's likely not a big deal, but it's worth investigating if we have
     #  too much time on our hands
@@ -86,7 +88,9 @@ class MixMatchModule(pl.LightningModule):
         for param in self.ema_model.parameters():
             param.detach_()
 
-        self.ema_updater = WeightEMA(model=self.model, ema_model=self.ema_model)
+        self.ema_updater = WeightEMA(
+            model=self.model, ema_model=self.ema_model
+        )
 
     def forward(self, x):
         return self.model(x)
@@ -176,7 +180,9 @@ class MixMatchModule(pl.LightningModule):
             y_mix_pred = [self(x) for x in x_mix]
 
             # Un-interleave to shuffle back to original order
-            y_mix_pred = mixmatch.utils.interleave.interleave(y_mix_pred, batch_size)
+            y_mix_pred = mixmatch.utils.interleave.interleave(
+                y_mix_pred, batch_size
+            )
 
             y_mix_lbl_pred = y_mix_pred[0]
             y_mix_lbl = y_mix[:batch_size]
@@ -209,7 +215,9 @@ class MixMatchModule(pl.LightningModule):
         y_pred = self.ema_model(x)
         loss = F.cross_entropy(y_pred, y.long())
 
-        acc = accuracy(y_pred, y, task="multiclass", num_classes=y_pred.shape[1])
+        acc = accuracy(
+            y_pred, y, task="multiclass", num_classes=y_pred.shape[1]
+        )
         self.log("val_loss", loss)
         self.log("val_acc", acc, prog_bar=True)
         return loss
