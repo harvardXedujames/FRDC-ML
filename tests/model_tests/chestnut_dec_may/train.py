@@ -28,8 +28,11 @@ from torchvision.transforms.v2 import (
 )
 
 from frdc.load import FRDCDataset
-from frdc.models import InceptionV3
-from frdc.train import FRDCDataModule
+from frdc.load.dataset import FRDCUnlabelledDataset
+from frdc.models.inceptionv3 import (
+    InceptionV3MixMatchModule,
+)
+from frdc.train.frdc_datamodule import FRDCSSLDataModule
 
 
 def preprocess(x):
@@ -38,19 +41,25 @@ def preprocess(x):
             ToImage(),
             ToDtype(torch.float32, scale=True),
             CenterCrop(
-                [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE],
+                [
+                    InceptionV3MixMatchModule.MIN_SIZE,
+                    InceptionV3MixMatchModule.MIN_SIZE,
+                ],
             ),
         ]
     )(x)
 
 
-def random_preprocess(x):
+def train_preprocess(x):
     return Compose(
         [
             ToImage(),
             ToDtype(torch.float32, scale=True),
             RandomCrop(
-                [InceptionV3.MIN_SIZE, InceptionV3.MIN_SIZE],
+                [
+                    InceptionV3MixMatchModule.MIN_SIZE,
+                    InceptionV3MixMatchModule.MIN_SIZE,
+                ],
                 pad_if_needed=True,
                 padding_mode="constant",
                 fill=0,
@@ -61,43 +70,30 @@ def random_preprocess(x):
     )(x)
 
 
-class InceptionV3Module(InceptionV3):
-    def __init__(
-        self,
-        *,
-        n_out_classes: int,
-        lr: float,
-        x_scaler: StandardScaler,
-        y_encoder: OrdinalEncoder,
-    ):
-        self.lr = lr
-        super().__init__(
-            n_out_classes=n_out_classes,
-            x_scaler=x_scaler,
-            y_encoder=y_encoder,
-        )
-
-    # TODO: PyTorch Lightning is complaining that I'm setting this in the
-    #       Module instead of DataModule, we can likely migrate this to
-    #       the ___step() functions.
-
-    def configure_optimizers(self):
-        optim = torch.optim.Adam(
-            self.parameters(), lr=self.lr, weight_decay=1e-4
-        )
-        return optim
+def train_unl_preprocess(x):
+    # This simulates the n_aug of MixMatch
+    return train_preprocess(x), train_preprocess(x)
 
 
 def main():
     run = wandb.init()
     logger = WandbLogger(name="chestnut_dec_may", project="frdc")
     # Prepare the dataset
-    train_ds = FRDCDataset(
+    train_lab_ds = FRDCDataset(
         "chestnut_nature_park",
         "20201218",
         None,
-        transform=random_preprocess,
+        transform=train_preprocess,
     )
+
+    train_unl_ds = FRDCUnlabelledDataset(
+        "chestnut_nature_park",
+        "20201218",
+        None,
+        transform=train_unl_preprocess,
+    )
+
+    # Subset(train_ds, np.argwhere(train_ds.targets == 0).reshape(-1))
     val_ds = FRDCDataset(
         "chestnut_nature_park",
         "20210510",
@@ -109,15 +105,16 @@ def main():
         handle_unknown="use_encoded_value",
         unknown_value=np.nan,
     )
-    oe.fit(np.array(train_ds.targets).reshape(-1, 1))
+    oe.fit(np.array(train_lab_ds.targets).reshape(-1, 1))
     n_classes = len(oe.categories_[0])
 
     ss = StandardScaler()
-    ss.fit(train_ds.ar.reshape(-1, train_ds.ar.shape[-1]))
+    ss.fit(train_lab_ds.ar.reshape(-1, train_lab_ds.ar.shape[-1]))
 
     # Prepare the datamodule and trainer
-    dm = FRDCDataModule(
-        train_ds=train_ds,
+    dm = FRDCSSLDataModule(
+        train_lab_ds=train_lab_ds,
+        train_unl_ds=train_unl_ds,
         val_ds=val_ds,
         batch_size=BATCH_SIZE,
         train_iters=TRAIN_ITERS,
@@ -139,8 +136,8 @@ def main():
         ],
         logger=logger,
     )
-    m = InceptionV3Module(
-        n_out_classes=n_classes,
+    m = InceptionV3MixMatchModule(
+        n_classes=n_classes,
         lr=LR,
         x_scaler=ss,
         y_encoder=oe,
