@@ -1,26 +1,23 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from copy import deepcopy
-from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.nn.parallel
 import torch.nn.parallel
+from lightning import LightningModule
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from torch.nn.functional import one_hot
 from torchmetrics.functional import accuracy
 
 import mixmatch.utils.interleave
-from frdc.train import FRDCModule
-from mixmatch.utils.ema import WeightEMA
 
 
-# The eq=False is to prevent overriding hash
-@dataclass(eq=False)
-class MixMatchModule(FRDCModule):
+class MixMatchModule(LightningModule):
     def __init__(
         self,
         *,
@@ -53,28 +50,19 @@ class MixMatchModule(FRDCModule):
             ema_lr: The learning rate to use for the EMA.
         """
 
-        super().__init__(x_scaler=x_scaler, y_encoder=y_encoder)
+        super().__init__()
+
+        self.x_scaler = x_scaler
+        self.y_encoder = y_encoder
         self.n_classes = n_classes
         self.sharpen_temp = sharpen_temp
         self.mix_beta_alpha = mix_beta_alpha
         self.ema_lr = ema_lr
         self.interleave = interleave
-
-        self.ema_model = deepcopy(self.model)
-        for param in self.ema_model.parameters():
-            param.detach_()
-
-        self.ema_updater = WeightEMA(
-            model=self.model, ema_model=self.ema_model
-        )
+        self.save_hyperparameters()
 
     @abstractmethod
     def forward(self, x):
-        ...
-
-    @property
-    @abstractmethod
-    def model(self):
         ...
 
     @staticmethod
@@ -83,7 +71,7 @@ class MixMatchModule(FRDCModule):
 
     @staticmethod
     def loss_lbl(lbl_pred: torch.Tensor, lbl: torch.Tensor):
-        return F.cross_entropy(lbl_pred, lbl.long())
+        return F.cross_entropy(lbl_pred, lbl)
 
     @staticmethod
     def loss_unl(unl_pred: torch.Tensor, unl: torch.Tensor):
@@ -152,8 +140,7 @@ class MixMatchModule(FRDCModule):
 
     def training_step(self, batch, batch_idx):
         # Progress is a linear ramp from 0 to 1 over the course of training.q
-        (x_lbl, y_lbl), (x_unls, _) = batch
-        x_lbl = x_lbl[0]
+        (x_lbl, y_lbl), x_unls = batch
         y_lbl = one_hot(y_lbl.long(), num_classes=self.n_classes)
 
         with torch.no_grad():
@@ -234,3 +221,80 @@ class MixMatchModule(FRDCModule):
         self.log("test_loss", loss)
         self.log("test_acc", acc, prog_bar=True)
         return loss
+
+    @torch.no_grad()
+    def on_before_batch_transfer(self, batch: Any, dataloader_idx: int) -> Any:
+        """This method is called before any data transfer to the device.
+
+        We leverage this to do some preprocessing on the data.
+        Namely, we use the StandardScaler and OrdinalEncoder to transform the
+        data.
+        """
+
+        if self.training:
+            (x_lab, y), x_unl = batch
+            xs = [x_lab, *x_unl]
+
+            b, c, h, w = x_lab.shape
+
+            # Move Channel to the last dimension then transform
+            xs_ss: list[np.ndarray] = [
+                self.x_scaler.transform(x.permute(0, 2, 3, 1).reshape(-1, c))
+                for x in xs
+            ]
+
+            # Move Channel back to the second dimension
+            xs_: list[torch.Tensor] = [
+                torch.from_numpy(x_ss.reshape(b, h, w, c))
+                .permute(0, 3, 1, 2)
+                .float()
+                for x_ss in xs_ss
+            ]
+
+            # Ordinal Encoder only accepts (n_samples, 1), so we need to do some
+            y: tuple[str]
+            y_: torch.Tensor = torch.from_numpy(
+                self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
+            )
+
+            # Ordinal Encoders can return a np.nan if the value is not in the
+            # categories. We will remove that from the batch.
+            x_ = xs_[0][~torch.isnan(y_)]
+            y_ = y_[~torch.isnan(y_)]
+
+            return (x_, y_.long()), xs_[1:]
+
+        else:
+            x, y = batch
+
+            # Standard Scaler only accepts (n_samples, n_features), so we need to
+            # do some fancy reshaping.
+            # Note that moving dimensions then reshaping is different from just
+            # reshaping!
+            x: torch.Tensor
+            b, c, h, w = x.shape
+
+            # Move Channel to the last dimension then transform
+            x_ss: np.ndarray = self.x_scaler.transform(
+                x.permute(0, 2, 3, 1).reshape(-1, c)
+            )
+
+            # Move Channel back to the second dimension
+            x_: torch.Tensor = (
+                torch.from_numpy(x_ss.reshape(b, h, w, c))
+                .permute(0, 3, 1, 2)
+                .float()
+            )
+
+            # Ordinal Encoder only accepts (n_samples, 1), so we need to do some
+            y: tuple[str]
+            y_: torch.Tensor = torch.from_numpy(
+                self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
+            )
+
+            # Ordinal Encoders can return a np.nan if the value is not in the
+            # categories. We will remove that from the batch.
+            x_ = x_[~torch.isnan(y_)]
+            y_ = y_[~torch.isnan(y_)]
+
+            return x_, y_.long()
