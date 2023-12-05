@@ -6,7 +6,7 @@ from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
 from frdc.train.mixmatch_module import MixMatchModule
-from frdc.utils.ema import WeightEMA
+from frdc.utils.ema import EMA
 
 
 class InceptionV3MixMatchModule(MixMatchModule):
@@ -22,6 +22,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
         lr: float,
         x_scaler: StandardScaler,
         y_encoder: OrdinalEncoder,
+        ema_lr: float = 0.001,
     ):
         """Initialize the InceptionV3 model.
 
@@ -42,8 +43,6 @@ class InceptionV3MixMatchModule(MixMatchModule):
             y_encoder=y_encoder,
             sharpen_temp=0.5,
             mix_beta_alpha=0.75,
-            ema_lr=0.001,
-            interleave=False,
         )
 
         self.inception = inception_v3(
@@ -64,11 +63,19 @@ class InceptionV3MixMatchModule(MixMatchModule):
         )
         # The problem is that the deep copy runs even before the module is
         # initialized, which means ema_model is empty.
-        self.ema_model = deepcopy(self)
-        for param in self.ema_model.parameters():
+        ema_model = deepcopy(self)
+        for param in ema_model.parameters():
             param.detach_()
+        self._ema_model = ema_model
+        self.ema_updater = EMA(model=self, ema_model=self.ema_model)
+        self.ema_lr = ema_lr
 
-        self.ema_updater = WeightEMA(model=self, ema_model=self.ema_model)
+    @property
+    def ema_model(self):
+        return self._ema_model
+
+    def update_ema(self):
+        self.ema_updater.update(self.ema_lr)
 
     def forward(self, x: torch.Tensor):
         """Forward pass.

@@ -9,12 +9,9 @@ import torch.nn.functional as F
 import torch.nn.parallel
 import torch.nn.parallel
 from lightning import LightningModule
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from torch.nn.functional import one_hot
 from torchmetrics.functional import accuracy
-
-import mixmatch.utils.interleave
 
 
 class MixMatchModule(LightningModule):
@@ -26,8 +23,6 @@ class MixMatchModule(LightningModule):
         n_classes: int = 10,
         sharpen_temp: float = 0.5,
         mix_beta_alpha: float = 0.75,
-        ema_lr: float = 0.001,
-        interleave: bool = False,
     ):
         """PyTorch Lightning Module for MixMatch
 
@@ -47,7 +42,6 @@ class MixMatchModule(LightningModule):
             sharpen_temp: The temperature to use for sharpening.
             mix_beta_alpha: The alpha to use for the beta distribution
                 when mixing.
-            ema_lr: The learning rate to use for the EMA.
         """
 
         super().__init__()
@@ -57,9 +51,25 @@ class MixMatchModule(LightningModule):
         self.n_classes = n_classes
         self.sharpen_temp = sharpen_temp
         self.mix_beta_alpha = mix_beta_alpha
-        self.ema_lr = ema_lr
-        self.interleave = interleave
         self.save_hyperparameters()
+
+    @property
+    @abstractmethod
+    def ema_model(self):
+        """The inherited class should return the EMA model, which it should
+        retroactively create through `deepcopy(self)`. Furthermore, the
+        training loop will automatically call `update_ema` after each batch.
+        Thus, the inherited class should implement `update_ema` to update the
+        EMA model.
+        """
+        ...
+
+    @abstractmethod
+    def update_ema(self):
+        """This method should update the EMA model, which is handled by the
+        inherited class.
+        """
+        ...
 
     @abstractmethod
     def forward(self, x):
@@ -129,6 +139,7 @@ class MixMatchModule(LightningModule):
         # The sum will sum the tensors in the list,
         # it doesn't reduce the tensors
         y_unl = sum(y_unls) / len(y_unls)
+        # noinspection PyTypeChecker
         return y_unl
 
     @property
@@ -139,7 +150,7 @@ class MixMatchModule(LightningModule):
         ) / self.trainer.max_epochs
 
     def training_step(self, batch, batch_idx):
-        # Progress is a linear ramp from 0 to 1 over the course of training.q
+        # Progress is a linear ramp from 0 to 1 over the course of training.
         (x_lbl, y_lbl), x_unls = batch
         y_lbl = one_hot(y_lbl.long(), num_classes=self.n_classes)
 
@@ -151,32 +162,14 @@ class MixMatchModule(LightningModule):
         y = torch.cat([y_lbl, y_unl, y_unl], dim=0)
         x_mix, y_mix = self.mix_up(x, y, self.mix_beta_alpha)
 
-        if self.interleave:
-            # This performs interleaving, see our wiki for details.
-            batch_size = x_lbl.shape[0]
-            x_mix = list(torch.split(x_mix, batch_size))
-
-            # Interleave to get a consistent Batch Norm Calculation
-            x_mix = mixmatch.utils.interleave.interleave(x_mix, batch_size)
-
-            y_mix_pred = [self(x) for x in x_mix]
-
-            # Un-interleave to shuffle back to original order
-            y_mix_pred = mixmatch.utils.interleave.interleave(
-                y_mix_pred, batch_size
-            )
-
-            y_mix_lbl_pred = y_mix_pred[0]
-            y_mix_lbl = y_mix[:batch_size]
-            y_mix_unl_pred = torch.cat(y_mix_pred[1:], dim=0)
-            y_mix_unl = y_mix[batch_size:]
-        else:
-            batch_size = x_lbl.shape[0]
-            y_mix_pred = self(x_mix)
-            y_mix_lbl_pred = y_mix_pred[:batch_size]
-            y_mix_unl_pred = y_mix_pred[batch_size:]
-            y_mix_lbl = y_mix[:batch_size]
-            y_mix_unl = y_mix[batch_size:]
+        # This had interleaving, but it was removed as it's not significantly
+        # better
+        batch_size = x_lbl.shape[0]
+        y_mix_pred = self(x_mix)
+        y_mix_lbl_pred = y_mix_pred[:batch_size]
+        y_mix_unl_pred = y_mix_pred[batch_size:]
+        y_mix_lbl = y_mix[:batch_size]
+        y_mix_unl = y_mix[batch_size:]
 
         loss_lbl = self.loss_lbl(y_mix_lbl_pred, y_mix_lbl)
         loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
@@ -196,7 +189,7 @@ class MixMatchModule(LightningModule):
     # It's important to keep this to avoid a memory leak.
     @torch.no_grad()
     def on_after_backward(self) -> None:
-        self.ema_updater.update(self.ema_lr)
+        self.update_ema()
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -242,6 +235,8 @@ class MixMatchModule(LightningModule):
         data.
         """
 
+        # TODO: ngl, this is pretty chunky.
+        #       It works, but it's not very pretty.
         if self.training:
             (x_lab, y), x_unl = batch
             xs = [x_lab, *x_unl]
@@ -262,7 +257,6 @@ class MixMatchModule(LightningModule):
                 for x_ss in xs_ss
             ]
 
-            # Ordinal Encoder only accepts (n_samples, 1), so we need to do some
             y: tuple[str]
             y_: torch.Tensor = torch.from_numpy(
                 self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
@@ -278,13 +272,13 @@ class MixMatchModule(LightningModule):
         else:
             x, y = batch
 
-            # Standard Scaler only accepts (n_samples, n_features), so we need to
-            # do some fancy reshaping.
-            # Note that moving dimensions then reshaping is different from just
-            # reshaping!
             x: torch.Tensor
             b, c, h, w = x.shape
 
+            # Standard Scaler only accepts (n_samples, n_features),
+            # so we need to do some fancy reshaping.
+            # Note that moving dimensions then reshaping is different from just
+            # reshaping!
             # Move Channel to the last dimension then transform
             x_ss: np.ndarray = self.x_scaler.transform(
                 x.permute(0, 2, 3, 1).reshape(-1, c)
@@ -297,7 +291,6 @@ class MixMatchModule(LightningModule):
                 .float()
             )
 
-            # Ordinal Encoder only accepts (n_samples, 1), so we need to do some
             y: tuple[str]
             y_: torch.Tensor = torch.from_numpy(
                 self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
