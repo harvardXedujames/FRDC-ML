@@ -222,6 +222,17 @@ class MixMatchModule(LightningModule):
         self.log("test_acc", acc, prog_bar=True)
         return loss
 
+    def predict_step(self, batch, *args, **kwargs) -> Any:
+        x, y = batch
+        y_pred = self.ema_model(x)
+        y_true_str = self.y_encoder.inverse_transform(
+            y.cpu().numpy().reshape(-1, 1)
+        )
+        y_pred_str = self.y_encoder.inverse_transform(
+            y_pred.argmax(dim=1).cpu().numpy().reshape(-1, 1)
+        )
+        return y_true_str, y_pred_str
+
     @torch.no_grad()
     def on_before_batch_transfer(self, batch: Any, dataloader_idx: int) -> Any:
         """This method is called before any data transfer to the device.
