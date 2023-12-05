@@ -347,6 +347,13 @@ class FRDCDataset(Dataset):
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
 
 
+# TODO: Kind of hacky, the unlabelled dataset should somehow come from the
+#       labelled dataset by filtering out the unknown labels. But we'll
+#       figure out this later when we do get unlabelled data.
+#       I'm thinking some API that's like
+#       FRDCDataset.filter_labels(...) -> FRDCSubset, FRDCSubset
+#       It could be more intuitive if it returns FRDCDataset, so we don't have
+#       to implement another class.
 class FRDCUnlabelledDataset(FRDCDataset):
     def __getitem__(self, item):
         return (
@@ -356,11 +363,11 @@ class FRDCUnlabelledDataset(FRDCDataset):
         )
 
 
+# This is not yet used much as we don't have sufficient training data.
 class FRDCConcatDataset(ConcatDataset):
     def __init__(self, datasets: list[FRDCDataset]):
         super().__init__(datasets)
         self.datasets = datasets
-        #
 
     def __getitem__(self, idx):
         x, y = super().__getitem__(idx)
