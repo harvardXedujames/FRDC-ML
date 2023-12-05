@@ -6,7 +6,7 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Any
 
 import numpy as np
 import pandas as pd
@@ -162,7 +162,7 @@ class FRDCDataset(Dataset):
         site: str,
         date: str,
         version: str | None,
-        transform: Callable[[list[np.ndarray]], list[np.ndarray]] = None,
+        transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
     ):
         """Initializes the FRDC Dataset.
@@ -345,6 +345,15 @@ class FRDCDataset(Dataset):
         im = Image.open(Path(path).as_posix())
         ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
+
+
+class FRDCUnlabelledDataset(FRDCDataset):
+    def __getitem__(self, item):
+        return (
+            self.transform(self.ar_segments[item])
+            if self.transform
+            else self.ar_segments[item]
+        )
 
 
 class FRDCConcatDataset(ConcatDataset):
