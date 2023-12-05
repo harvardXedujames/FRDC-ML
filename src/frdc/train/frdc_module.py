@@ -38,7 +38,7 @@ class FRDCModule(LightningModule):
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        loss = nn.CrossEntropyLoss()(y_hat, y)
+        loss = nn.CrossEntropyLoss()(y_hat, y.squeeze().long())
         self.log("test_loss", loss)
         self.log("test_acc", (y_hat.argmax(dim=1) == y).float().mean())
         return loss
