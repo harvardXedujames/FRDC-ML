@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class WeightEMA:
+class EMA:
     def __init__(
         self,
         model: nn.Module,
