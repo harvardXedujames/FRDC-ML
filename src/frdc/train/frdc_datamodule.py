@@ -44,6 +44,10 @@ class FRDCDataModule(LightningDataModule):
         )
 
 
+# TODO: This is a superclass of FRDCDataModule, we can technically mould our
+#       downstream tasks to accept the special train_dataloader(), which
+#       returns a list of dataloaders instead of a single dataloader.
+#       The above can be deprecated in favour of this.
 @dataclass
 class FRDCSSLDataModule(LightningDataModule):
     """FRDC Data Module.
