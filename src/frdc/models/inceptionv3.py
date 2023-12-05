@@ -1,14 +1,15 @@
-from abc import ABC
+from copy import deepcopy
 
 import torch
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
-from frdc.train import FRDCModule
+from frdc.train.mixmatch_module import MixMatchModule
+from frdc.utils.ema import WeightEMA
 
 
-class InceptionV3(FRDCModule, ABC):
+class InceptionV3MixMatchModule(MixMatchModule):
     INCEPTION_OUT_DIMS = 2048
     INCEPTION_AUX_DIMS = 1000
     INCEPTION_IN_CHANNELS = 3
@@ -17,14 +18,15 @@ class InceptionV3(FRDCModule, ABC):
     def __init__(
         self,
         *,
-        n_out_classes: int,
+        n_classes: int,
+        lr: float,
         x_scaler: StandardScaler,
         y_encoder: OrdinalEncoder,
     ):
         """Initialize the InceptionV3 model.
 
         Args:
-            n_out_classes: The number of output classes
+            n_classes: The number of output classes
 
         Notes:
             - Min input size: 299 x 299.
@@ -32,8 +34,17 @@ class InceptionV3(FRDCModule, ABC):
 
             Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
         """
+        self.lr = lr
 
-        super().__init__(x_scaler=x_scaler, y_encoder=y_encoder)
+        super().__init__(
+            n_classes=n_classes,
+            x_scaler=x_scaler,
+            y_encoder=y_encoder,
+            sharpen_temp=0.5,
+            mix_beta_alpha=0.75,
+            ema_lr=0.001,
+            interleave=False,
+        )
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
@@ -44,14 +55,20 @@ class InceptionV3(FRDCModule, ABC):
         for param in self.inception.parameters():
             param.requires_grad = False
 
-        # self.fc = nn.Linear(self.INCEPTION_OUT_DIMS, n_out_classes)
         self.fc = nn.Sequential(
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS),
             nn.Linear(self.INCEPTION_OUT_DIMS, self.INCEPTION_OUT_DIMS // 2),
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS // 2),
-            nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_out_classes),
+            nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_classes),
             nn.Softmax(dim=1),
         )
+        # The problem is that the deep copy runs even before the module is
+        # initialized, which means ema_model is empty.
+        self.ema_model = deepcopy(self)
+        for param in self.ema_model.parameters():
+            param.detach_()
+
+        self.ema_updater = WeightEMA(model=self, ema_model=self.ema_model)
 
     def forward(self, x: torch.Tensor):
         """Forward pass.
@@ -83,3 +100,9 @@ class InceptionV3(FRDCModule, ABC):
             logits = self.inception(x)
 
         return self.fc(logits)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=self.lr,
+        )

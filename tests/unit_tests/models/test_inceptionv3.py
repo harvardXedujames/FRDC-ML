@@ -13,7 +13,7 @@ MIN_SIZE = InceptionV3.MIN_SIZE
 @pytest.fixture(scope="module")
 def inceptionv3():
     return InceptionV3(
-        n_out_classes=N_CLASSES,
+        n_classes=N_CLASSES,
         x_scaler=StandardScaler(),
         y_encoder=OrdinalEncoder(),
     )
