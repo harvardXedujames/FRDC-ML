@@ -11,7 +11,10 @@ from torchvision.transforms import RandomVerticalFlip
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
 from frdc.load import FRDCDataset
-from model_tests.chestnut_dec_may.train import InceptionV3Module, preprocess
+from model_tests.chestnut_dec_may.train import (
+    InceptionV3MixMatchModule,
+    preprocess,
+)
 
 
 # TODO: Ideally, we should have a separate dataset for testing.
@@ -45,8 +48,8 @@ def main():
         transform=preprocess,
     )
 
-    m = InceptionV3Module.load_from_checkpoint(
-        Path("frdc/jz0devw6/checkpoints/epoch=5-step=300.ckpt")
+    m = InceptionV3MixMatchModule.load_from_checkpoint(
+        Path("frdc/fw9dypa4/checkpoints/epoch=16-step=850.ckpt")
     )
     # Make predictions
     trainer = pl.Trainer(logger=False)
@@ -55,7 +58,7 @@ def main():
     y_preds = []
     for y_true, y_pred in pred:
         y_trues.append(y_true)
-        y_preds.append(y_pred.argmax(dim=1))
+        y_preds.append(y_pred)
     y_trues = np.concatenate(y_trues)
     y_preds = np.concatenate(y_preds)
     acc = (y_trues == y_preds).mean()
