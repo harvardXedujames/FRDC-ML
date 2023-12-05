@@ -1,89 +1,65 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Callable, Protocol
 
 import numpy as np
-import pytorch_lightning as pl
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel
 import torch.nn.parallel
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from torch.nn.functional import one_hot
 from torchmetrics.functional import accuracy
 
 import mixmatch.utils.interleave
+from frdc.train import FRDCModule
 from mixmatch.utils.ema import WeightEMA
-
-
-class LossUnlScale(Protocol):
-    def __call__(self, progress: float) -> float:
-        return progress * 75
 
 
 # The eq=False is to prevent overriding hash
 @dataclass(eq=False)
-class MixMatchModule(pl.LightningModule):
-    """PyTorch Lightning Module for MixMatch
+class MixMatchModule(FRDCModule):
+    def __init__(
+        self,
+        *,
+        x_scaler: StandardScaler,
+        y_encoder: OrdinalEncoder,
+        n_classes: int = 10,
+        sharpen_temp: float = 0.5,
+        mix_beta_alpha: float = 0.75,
+        ema_lr: float = 0.001,
+        interleave: bool = False,
+    ):
+        """PyTorch Lightning Module for MixMatch
 
-    Notes:
-        This performs MixMatch as described in the paper.
-        https://arxiv.org/abs/1905.02249
+        Notes:
+            This performs MixMatch as described in the paper.
+            https://arxiv.org/abs/1905.02249
 
-        This module is designed to be used with any model, not only
-        the WideResNet model.
+            This module is designed to be used with any model, not only
+            the WideResNet model.
 
-        Furthermore, while it's possible to switch datasets, take a look
-        at how we implement the CIFAR10DataModule's DataLoaders to see
-        how to implement a new dataset.
+            Furthermore, while it's possible to switch datasets, take a look
+            at how we implement the CIFAR10DataModule's DataLoaders to see
+            how to implement a new dataset.
 
-    Args:
-        model_fn: The function to use to create the model.
-        n_classes: The number of classes in the dataset.
-        sharpen_temp: The temperature to use for sharpening.
-        mix_beta_alpha: The alpha to use for the beta distribution when mixing.
-        loss_unl_scaler: The scale to use for the unsupervised loss.
-        ema_lr: The learning rate to use for the EMA.
-        lr: The learning rate to use for the optimizer.
-        weight_decay: The weight decay to use for the optimizer.
-    """
+        Args:
+            n_classes: The number of classes in the dataset.
+            sharpen_temp: The temperature to use for sharpening.
+            mix_beta_alpha: The alpha to use for the beta distribution
+                when mixing.
+            ema_lr: The learning rate to use for the EMA.
+        """
 
-    model_fn: Callable[[], nn.Module]
-    loss_unl_scaler: LossUnlScale
-    n_classes: int = 10
-    sharpen_temp: float = 0.5
-    mix_beta_alpha: float = 0.75
-    ema_lr: float = 0.001
-    lr: float = 0.002
-    weight_decay: float = 0.00004
+        super().__init__(x_scaler=x_scaler, y_encoder=y_encoder)
+        self.n_classes = n_classes
+        self.sharpen_temp = sharpen_temp
+        self.mix_beta_alpha = mix_beta_alpha
+        self.ema_lr = ema_lr
+        self.interleave = interleave
 
-    # See our wiki for details on interleave
-    interleave: bool = False
-
-    get_loss_lbl: Callable[
-        [torch.Tensor, torch.Tensor], torch.Tensor
-    ] = F.cross_entropy
-    # TODO: Not sure why this is different from MSELoss
-    #  It's likely not a big deal, but it's worth investigating if we have
-    #  too much time on our hands
-    get_loss_unl: Callable[
-        [torch.Tensor, torch.Tensor], torch.Tensor
-    ] = lambda pred, tgt: torch.mean((torch.softmax(pred, dim=1) - tgt) ** 2)
-
-    def __post_init__(self):
-        super().__init__()
-        self.save_hyperparameters(
-            ignore=[
-                "model_fn",
-                "get_loss_lbl",
-                "get_loss_unl",
-                "loss_unl_scaler",
-                "model",
-            ]
-        )
-        self.model = self.model_fn()
         self.ema_model = deepcopy(self.model)
         for param in self.ema_model.parameters():
             param.detach_()
@@ -92,8 +68,26 @@ class MixMatchModule(pl.LightningModule):
             model=self.model, ema_model=self.ema_model
         )
 
+    @abstractmethod
     def forward(self, x):
-        return self.model(x)
+        ...
+
+    @property
+    @abstractmethod
+    def model(self):
+        ...
+
+    @staticmethod
+    def loss_unl_scaler(progress: float) -> float:
+        return progress * 75
+
+    @staticmethod
+    def loss_lbl(lbl_pred: torch.Tensor, lbl: torch.Tensor):
+        return F.cross_entropy(lbl_pred, lbl.long())
+
+    @staticmethod
+    def loss_unl(unl_pred: torch.Tensor, unl: torch.Tensor):
+        return torch.mean((torch.softmax(unl_pred, dim=1) - unl) ** 2)
 
     @staticmethod
     def mix_up(
@@ -144,7 +138,8 @@ class MixMatchModule(pl.LightningModule):
         y_unls: list[torch.Tensor] = [
             torch.softmax(self.ema_model(u), dim=1) for u in x_unls
         ]
-        # The sum will sum the tensors in the list, it doesn't reduce the tensors
+        # The sum will sum the tensors in the list,
+        # it doesn't reduce the tensors
         y_unl = sum(y_unls) / len(y_unls)
         return y_unl
 
@@ -196,8 +191,8 @@ class MixMatchModule(pl.LightningModule):
             y_mix_lbl = y_mix[:batch_size]
             y_mix_unl = y_mix[batch_size:]
 
-        loss_lbl = self.get_loss_lbl(y_mix_lbl_pred, y_mix_lbl)
-        loss_unl = self.get_loss_unl(y_mix_unl_pred, y_mix_unl)
+        loss_lbl = self.loss_lbl(y_mix_lbl_pred, y_mix_lbl)
+        loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
 
         loss_unl_scale = self.loss_unl_scaler(progress=self.progress)
 
@@ -209,6 +204,12 @@ class MixMatchModule(pl.LightningModule):
         self.log("train_loss_unl", loss_unl)
 
         return loss
+
+    # PyTorch Lightning doesn't automatically no_grads the EMA step.
+    # It's important to keep this to avoid a memory leak.
+    @torch.no_grad()
+    def on_after_backward(self) -> None:
+        self.ema_updater.update(self.ema_lr)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -222,13 +223,14 @@ class MixMatchModule(pl.LightningModule):
         self.log("val_acc", acc, prog_bar=True)
         return loss
 
-    # PyTorch Lightning doesn't automatically no_grads the EMA step.
-    # It's important to keep this to avoid a memory leak.
-    @torch.no_grad()
-    def on_after_backward(self) -> None:
-        self.ema_updater.update(self.ema_lr)
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_pred = self.ema_model(x)
+        loss = F.cross_entropy(y_pred, y.long())
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(
-            self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay
+        acc = accuracy(
+            y_pred, y, task="multiclass", num_classes=y_pred.shape[1]
         )
+        self.log("test_loss", loss)
+        self.log("test_acc", acc, prog_bar=True)
+        return loss

@@ -50,6 +50,13 @@ class FRDCModule(LightningModule):
 
     @torch.no_grad()
     def on_before_batch_transfer(self, batch: Any, dataloader_idx: int) -> Any:
+        """This method is called before any data transfer to the device.
+
+        We leverage this to do some preprocessing on the data.
+        Namely, we use the StandardScaler and OrdinalEncoder to transform the
+        data.
+        """
+
         x, y = batch
 
         # Standard Scaler only accepts (n_samples, n_features), so we need to
