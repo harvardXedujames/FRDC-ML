@@ -1,19 +1,33 @@
+from copy import deepcopy
+
 import torch
+from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
 
+from frdc.train.mixmatch_module import MixMatchModule
+from frdc.utils.ema import EMA
 
-class FaceNet(nn.Module):
+
+class InceptionV3MixMatchModule(MixMatchModule):
     INCEPTION_OUT_DIMS = 2048
     INCEPTION_AUX_DIMS = 1000
     INCEPTION_IN_CHANNELS = 3
     MIN_SIZE = 299
 
-    def __init__(self, n_out_classes: int = 10):
-        """Initialize the FaceNet model.
+    def __init__(
+        self,
+        *,
+        n_classes: int,
+        lr: float,
+        x_scaler: StandardScaler,
+        y_encoder: OrdinalEncoder,
+        ema_lr: float = 0.001,
+    ):
+        """Initialize the InceptionV3 model.
 
         Args:
-            n_out_classes: The number of output classes
+            n_classes: The number of output classes
 
         Notes:
             - Min input size: 299 x 299.
@@ -21,7 +35,15 @@ class FaceNet(nn.Module):
 
             Retrieve these constants in class attributes MIN_SIZE and CHANNELS.
         """
-        super().__init__()
+        self.lr = lr
+
+        super().__init__(
+            n_classes=n_classes,
+            x_scaler=x_scaler,
+            y_encoder=y_encoder,
+            sharpen_temp=0.5,
+            mix_beta_alpha=0.75,
+        )
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
@@ -32,14 +54,28 @@ class FaceNet(nn.Module):
         for param in self.inception.parameters():
             param.requires_grad = False
 
-        # self.fc = nn.Linear(self.INCEPTION_OUT_DIMS, n_out_classes)
         self.fc = nn.Sequential(
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS),
             nn.Linear(self.INCEPTION_OUT_DIMS, self.INCEPTION_OUT_DIMS // 2),
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS // 2),
-            nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_out_classes),
+            nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_classes),
             nn.Softmax(dim=1),
         )
+        # The problem is that the deep copy runs even before the module is
+        # initialized, which means ema_model is empty.
+        ema_model = deepcopy(self)
+        for param in ema_model.parameters():
+            param.detach_()
+        self._ema_model = ema_model
+        self.ema_updater = EMA(model=self, ema_model=self.ema_model)
+        self.ema_lr = ema_lr
+
+    @property
+    def ema_model(self):
+        return self._ema_model
+
+    def update_ema(self):
+        self.ema_updater.update(self.ema_lr)
 
     def forward(self, x: torch.Tensor):
         """Forward pass.
@@ -62,7 +98,6 @@ class FaceNet(nn.Module):
                 f" - No singleton dimensions\n"
                 f" - Size >= {self.MIN_SIZE}\n"
             )
-        # x = self.feature_extraction(x)
 
         # During training, the auxiliary outputs are used for auxiliary loss,
         # but during testing, only the main output is used.
@@ -72,3 +107,9 @@ class FaceNet(nn.Module):
             logits = self.inception(x)
 
         return self.fc(logits)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=self.lr,
+        )

@@ -6,13 +6,21 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Callable, Any
 
 import numpy as np
 import pandas as pd
+import torch
 from PIL import Image
 from google.cloud import storage
 from google.oauth2.service_account import Credentials
+from torch.utils.data import Dataset, ConcatDataset
+from torchvision.transforms.v2 import (
+    Compose,
+    ToImage,
+    ToDtype,
+    Resize,
+)
 
 from frdc.conf import (
     LOCAL_DATASET_ROOT_DIR,
@@ -20,6 +28,7 @@ from frdc.conf import (
     GCS_BUCKET_NAME,
     BAND_CONFIG,
 )
+from frdc.preprocess.extract_segments import extract_segments_from_bounds
 from frdc.utils import Rect
 
 
@@ -147,21 +156,68 @@ class FRDCDownloader:
 
 
 @dataclass
-class FRDCDataset:
-    site: str
-    date: str
-    version: str | None
-    dl: FRDCDownloader = field(default_factory=FRDCDownloader)
+class FRDCDataset(Dataset):
+    def __init__(
+        self,
+        site: str,
+        date: str,
+        version: str | None,
+        transform: Callable[[list[np.ndarray]], Any] = None,
+        target_transform: Callable[[list[str]], list[str]] = None,
+    ):
+        """Initializes the FRDC Dataset.
+
+        Args:
+            site: The site of the dataset, e.g. "chestnut_nature_park".
+            date: The date of the dataset, e.g. "20201218".
+            version: The version of the dataset, e.g. "183deg".
+        """
+        self.site = site
+        self.date = date
+        self.version = version
+
+        self.dl = FRDCDownloader()
+
+        self.ar, self.order = self.get_ar_bands()
+        bounds, self.targets = self.get_bounds_and_labels()
+        self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.ar_segments)
+
+    def __getitem__(self, idx):
+        return (
+            self.transform(self.ar_segments[idx])
+            if self.transform
+            else self.ar_segments[idx],
+            self.target_transform(self.targets[idx])
+            if self.target_transform
+            else self.targets[idx],
+        )
 
     @staticmethod
-    def _load_debug_dataset() -> FRDCDataset:
+    def _load_debug_dataset(resize: int = 299) -> FRDCDataset:
         """Loads a debug dataset from Google Cloud Storage.
 
         Returns:
             A dictionary of the dataset, with keys as the filenames and values
             as the images.
         """
-        return FRDCDataset(site="DEBUG", date="0", version=None)
+        return FRDCDataset(
+            site="DEBUG",
+            date="0",
+            version=None,
+            transform=Compose(
+                [
+                    ToImage(),
+                    ToDtype(torch.float32),
+                    Resize((resize, resize)),
+                ]
+            ),
+            target_transform=None,
+        )
 
     @property
     def dataset_dir(self):
@@ -287,5 +343,36 @@ class FRDCDataset:
         """
 
         im = Image.open(Path(path).as_posix())
-        ar = np.array(im)
+        ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
+
+
+# TODO: Kind of hacky, the unlabelled dataset should somehow come from the
+#       labelled dataset by filtering out the unknown labels. But we'll
+#       figure out this later when we do get unlabelled data.
+#       I'm thinking some API that's like
+#       FRDCDataset.filter_labels(...) -> FRDCSubset, FRDCSubset
+#       It could be more intuitive if it returns FRDCDataset, so we don't have
+#       to implement another class.
+class FRDCUnlabelledDataset(FRDCDataset):
+    def __getitem__(self, item):
+        return (
+            self.transform(self.ar_segments[item])
+            if self.transform
+            else self.ar_segments[item]
+        )
+
+
+# This is not yet used much as we don't have sufficient training data.
+class FRDCConcatDataset(ConcatDataset):
+    def __init__(self, datasets: list[FRDCDataset]):
+        super().__init__(datasets)
+        self.datasets = datasets
+
+    def __getitem__(self, idx):
+        x, y = super().__getitem__(idx)
+        return x, y
+
+    @property
+    def targets(self):
+        return [t for ds in self.datasets for t in ds.targets]
