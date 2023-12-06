@@ -32,7 +32,7 @@ from frdc.load.dataset import FRDCUnlabelledDataset
 from frdc.models.inceptionv3 import (
     InceptionV3MixMatchModule,
 )
-from frdc.train.frdc_datamodule import FRDCSSLDataModule
+from frdc.train.frdc_datamodule import FRDCDataModule
 
 
 def preprocess(x):
@@ -86,6 +86,8 @@ def main():
         transform=train_preprocess,
     )
 
+    # TODO: This is a hacky impl of the unlabelled dataset, see the docstring
+    #       for future work.
     train_unl_ds = FRDCUnlabelledDataset(
         "chestnut_nature_park",
         "20201218",
@@ -112,9 +114,9 @@ def main():
     ss.fit(train_lab_ds.ar.reshape(-1, train_lab_ds.ar.shape[-1]))
 
     # Prepare the datamodule and trainer
-    dm = FRDCSSLDataModule(
+    dm = FRDCDataModule(
         train_lab_ds=train_lab_ds,
-        train_unl_ds=train_unl_ds,
+        train_unl_ds=None,  # Pass in None to use the default supervised DM
         val_ds=val_ds,
         batch_size=BATCH_SIZE,
         train_iters=TRAIN_ITERS,
