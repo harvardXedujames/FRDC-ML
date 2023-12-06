@@ -4,18 +4,19 @@ import lightning as pl
 import numpy as np
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
-from frdc.train import FRDCModule, FRDCDataModule
-from model_tests.chestnut_dec_may.train import InceptionV3Module
+from frdc.models.inceptionv3 import InceptionV3MixMatchModule
+from frdc.train.frdc_datamodule import FRDCDataModule
 
 BATCH_SIZE = 3
 
 
-def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
+def test_manual_segmentation_pipeline(ds):
     """Manually segment the image according to bounds.csv,
     then train a model on it."""
 
     dm = FRDCDataModule(
-        train_ds=ds,
+        train_lab_ds=ds,
+        train_unl_ds=None,
         val_ds=ds,
         batch_size=BATCH_SIZE,
     )
@@ -30,8 +31,8 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
     ss = StandardScaler()
     ss.fit(ds.ar.reshape(-1, ds.ar.shape[-1]))
 
-    m = InceptionV3Module(
-        n_out_classes=n_classes,
+    m = InceptionV3MixMatchModule(
+        n_classes=n_classes,
         lr=1e-3,
         x_scaler=ss,
         y_encoder=oe,
@@ -42,5 +43,3 @@ def test_manual_segmentation_pipeline(ds) -> tuple[FRDCModule, FRDCDataModule]:
 
     val_loss = trainer.validate(m, datamodule=dm)[0]["val_loss"]
     logging.debug(f"Validation score: {val_loss:.2%}")
-
-    return m, dm
