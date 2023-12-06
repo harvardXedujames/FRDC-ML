@@ -116,7 +116,8 @@ def main():
     # Prepare the datamodule and trainer
     dm = FRDCDataModule(
         train_lab_ds=train_lab_ds,
-        train_unl_ds=None,  # Pass in None to use the default supervised DM
+        # Pass in None to use the default supervised DM
+        train_unl_ds=train_unl_ds,
         val_ds=val_ds,
         batch_size=BATCH_SIZE,
         train_iters=TRAIN_ITERS,
