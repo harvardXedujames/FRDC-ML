@@ -63,7 +63,7 @@ jobs:
       # Do not do cd as it'll break PYTHONPATH.
       - name: Run Model Training
         run: |
-          python3 -m tests.model_tests.chestnut_dec_may.main
+          python3 -m tests.model_tests.chestnut_dec_may.train
 
       - name: Comment results via CML
         run: |
