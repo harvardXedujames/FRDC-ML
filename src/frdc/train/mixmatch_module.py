@@ -152,37 +152,42 @@ class MixMatchModule(LightningModule):
     def training_step(self, batch, batch_idx):
         # Progress is a linear ramp from 0 to 1 over the course of training.
         (x_lbl, y_lbl), x_unls = batch
+
         y_lbl = one_hot(y_lbl.long(), num_classes=self.n_classes)
 
-        with torch.no_grad():
-            y_unl = self.guess_labels(x_unls=x_unls)
-            y_unl = self.sharpen(y_unl, self.sharpen_temp)
+        if x_unls:
+            # This route implies that we are using SSL
+            with torch.no_grad():
+                y_unl = self.guess_labels(x_unls=x_unls)
+                y_unl = self.sharpen(y_unl, self.sharpen_temp)
+            x = torch.cat([x_lbl, *x_unls], dim=0)
+            y = torch.cat([y_lbl, *(y_unl,) * len(x_unls)], dim=0)
+            x_mix, y_mix = self.mix_up(x, y, self.mix_beta_alpha)
 
-        x = torch.cat([x_lbl, *x_unls], dim=0)
-        y = torch.cat([y_lbl, y_unl, y_unl], dim=0)
-        x_mix, y_mix = self.mix_up(x, y, self.mix_beta_alpha)
+            # This had interleaving, but it was removed as it's not
+            # significantly better
+            batch_size = x_lbl.shape[0]
+            y_mix_pred = self(x_mix)
+            y_mix_lbl_pred = y_mix_pred[:batch_size]
+            y_mix_unl_pred = y_mix_pred[batch_size:]
+            y_mix_lbl = y_mix[:batch_size]
+            y_mix_unl = y_mix[batch_size:]
 
-        # This had interleaving, but it was removed as it's not significantly
-        # better
-        batch_size = x_lbl.shape[0]
-        y_mix_pred = self(x_mix)
-        y_mix_lbl_pred = y_mix_pred[:batch_size]
-        y_mix_unl_pred = y_mix_pred[batch_size:]
-        y_mix_lbl = y_mix[:batch_size]
-        y_mix_unl = y_mix[batch_size:]
+            loss_lbl = self.loss_lbl(y_mix_lbl_pred, y_mix_lbl)
+            loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
+            loss_unl_scale = self.loss_unl_scaler(progress=self.progress)
 
-        loss_lbl = self.loss_lbl(y_mix_lbl_pred, y_mix_lbl)
-        loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
+            loss = loss_lbl + loss_unl * loss_unl_scale
 
-        loss_unl_scale = self.loss_unl_scaler(progress=self.progress)
+            self.log("loss_unl_scale", loss_unl_scale, prog_bar=True)
+            self.log("train_loss_lbl", loss_lbl)
+            self.log("train_loss_unl", loss_unl)
+        else:
+            # This route implies that we are just using supervised learning
+            y_pred = self(x_lbl)
+            loss = self.loss_lbl(y_pred, y_lbl)
 
-        loss = loss_lbl + loss_unl * loss_unl_scale
-
-        self.log("loss_unl_scale", loss_unl_scale, prog_bar=True)
         self.log("train_loss", loss)
-        self.log("train_loss_lbl", loss_lbl)
-        self.log("train_loss_unl", loss_unl)
-
         return loss
 
     # PyTorch Lightning doesn't automatically no_grads the EMA step.
