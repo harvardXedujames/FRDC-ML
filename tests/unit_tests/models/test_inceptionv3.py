@@ -2,18 +2,19 @@ import pytest
 import torch
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
-from frdc.models import InceptionV3
+from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 
 N_CLASSES = 42
 N_CHANNELS = 3
 BATCH_SIZE = 2
-MIN_SIZE = InceptionV3.MIN_SIZE
+MIN_SIZE = InceptionV3MixMatchModule.MIN_SIZE
 
 
 @pytest.fixture(scope="module")
 def inceptionv3():
-    return InceptionV3(
+    return InceptionV3MixMatchModule(
         n_classes=N_CLASSES,
+        lr=1e-3,
         x_scaler=StandardScaler(),
         y_encoder=OrdinalEncoder(),
     )
