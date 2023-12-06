@@ -155,11 +155,14 @@ class MixMatchModule(LightningModule):
 
         y_lbl = one_hot(y_lbl.long(), num_classes=self.n_classes)
 
+        # If x_unls is Truthy, then we are using MixMatch.
+        # Otherwise, we are just using supervised learning.
         if x_unls:
             # This route implies that we are using SSL
             with torch.no_grad():
                 y_unl = self.guess_labels(x_unls=x_unls)
                 y_unl = self.sharpen(y_unl, self.sharpen_temp)
+
             x = torch.cat([x_lbl, *x_unls], dim=0)
             y = torch.cat([y_lbl, *(y_unl,) * len(x_unls)], dim=0)
             x_mix, y_mix = self.mix_up(x, y, self.mix_beta_alpha)
@@ -185,7 +188,7 @@ class MixMatchModule(LightningModule):
         else:
             # This route implies that we are just using supervised learning
             y_pred = self(x_lbl)
-            loss = self.loss_lbl(y_pred, y_lbl)
+            loss = self.loss_lbl(y_pred, y_lbl.float())
 
         self.log("train_loss", loss)
         return loss
