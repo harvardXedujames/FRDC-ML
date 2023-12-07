@@ -222,7 +222,7 @@ class FRDCDataset(Dataset):
     @property
     def dataset_dir(self):
         return Path(
-            f"rsc/{self.site}/{self.date}/"
+            f"{self.site}/{self.date}/"
             f"{self.version + '/' if self.version else ''}"
         )
 
