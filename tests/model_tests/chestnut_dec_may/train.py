@@ -75,7 +75,7 @@ def evaluate(ckpt_pth: Path | str | None = None) -> tuple[plt.Figure, float]:
     ds = FRDCDatasetFlipped(
         "chestnut_nature_park",
         "20210510",
-        "90deg43m85pct255deg/map",
+        "90deg43m85pct255deg",
         transform=preprocess,
     )
 
@@ -193,7 +193,7 @@ def main(
     val_ds = FRDCDataset(
         "chestnut_nature_park",
         "20210510",
-        "90deg43m85pct255deg/map",
+        "90deg43m85pct255deg",
         transform=preprocess,
     )
 
