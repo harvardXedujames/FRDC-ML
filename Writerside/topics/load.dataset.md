@@ -11,11 +11,8 @@ Load datasets from our GCS bucket.
 ## Classes
 
 <deflist>
-<def title="FRDCDownloader">
-This facilitates authentication and downloading from GCS.
-</def>
 <def title="FRDCDataset">
-This uses the Downloader to download and load the dataset.
+Uses GCS utils to download and load the dataset.
 It also implements useful helper functions to load FRDC-specific datasets,
 such as loading our images and labels.
 </def>
@@ -35,7 +32,7 @@ from frdc.load import FRDCDataset
 
 ds = FRDCDataset(site='chestnut_nature_park',
                  date='20201218',
-                 version=None, )
+                 version=None)
 ar, order = ds.get_ar_bands()
 bounds, labels = ds.get_bounds_and_labels()
 ```
@@ -49,35 +46,31 @@ If you need granular control over
 - the project used
 - the bucket used
 
-Then pass in a `FRDCDownloader` object to `FRDCDataset`.
+Then pass in a `GCSConfig` object to `FRDCDataset`.
 
 ```python
-from frdc.load import FRDCDownloader, FRDCDataset
+from frdc.load import FRDCDataset
+from frdc.load.gcs import GCSConfig
 
-dl = FRDCDownloader(credentials=...,
-                    local_dataset_root_dir=...,
-                    project_id=...,
-                    bucket_name=...)
+cfg = GCSConfig(credentials=...,
+               local_dir=...,
+               project_id=...,
+               bucket_name=...,
+               local_exists_ok=True)
 ds = FRDCDataset(site='chestnut_nature_park',
                  date='20201218',
-                 version=None,
-                 dl=dl)
-ar, order = ds.get_ar_bands()
-bounds, labels = ds.get_bounds_and_labels()
+                 version=None, )
+ar, order = ds.get_ar_bands(dl_config=cfg)
+bounds, labels = ds.get_bounds_and_labels(dl_config=cfg)
 ```
 
-If you have a file not easily downloadable by `FRDCDataset`, you can use
-`FRDCDownloader` to download it.
+If you have a file not easily downloadable by `FRDCDataset`, use the `gcs`
+module utility functions
 
 ```python
-from frdc.load import FRDCDownloader
+from frdc.load.gcs import download
 
-dl = FRDCDownloader(credentials=...,
-                    local_dataset_root_dir=...,
-                    project_id=...,
-                    bucket_name=...)
-
-dl.download_file(path_glob="path/to/gcs/file")
+download(fp="path/to/gcs/file")
 ```
 
 <tip>This will automatically save the file to the local dataset root dir.</tip>
@@ -88,7 +81,7 @@ dl.download_file(path_glob="path/to/gcs/file")
 
 <deflist>
 <def title="FRDCDataset(site, date, version, dl)">
-<b>Initializes the dataset downloader.</b><br/>
+<b>Initializes the dataset.</b><br/>
 This doesn't immediately download the dataset, but only when you call the
 <code>get_*</code> functions.<br/>
 The site, date, version must match the dataset path on GCS. For example
@@ -103,14 +96,10 @@ If the dataset doesn't have a "version", for example:
 <code>gs://frdc-scan/my-site/20201218</code>,
 then you can pass in <code>version=None</code>.<br/>
 <note>
-If you don't want to search up GCS, you can use FRDCDownloader to list all
-datasets, and their versions with 
-<code>FRDCDownloader().list_gcs_datasets()</code>
+If you don't want to search up GCS, you can use <code>gcs.utils</code>
+to list all datasets, and their versions with 
+<code>list_gcs_datasets()</code>
 </note>
-<tip>
-If <code>dl</code> is None, it will create a new FRDCDownloader. Usually,
-you don't need to pass this in unless you have a custom credential, or project.
-</tip>
 </def>
 <def title="get_ar_bands()">
 <b>Gets the NDArray bands (H x W x C) and channel order as 
@@ -135,7 +124,7 @@ is a list of labels.<br/>
 </def>
 </deflist>
 
-### FRDCDownloader
+### gcs.utils
 
 <deflist>
 <def title="list_gcs_datasets(anchor)">
@@ -143,15 +132,13 @@ is a list of labels.<br/>
 This works by checking which folders have a specific file, which we call the
 <code>anchor</code>.
 </def>
-<def title="download_file(path_glob, local_exists_ok)">
+<def title="download(fp, config)">
 <b>Downloads a file from GCS.</b><br/>
-This takes in a path glob, a string containing wildcards, and downloads exactly
-1 file. If it matches 0 or more than 1 file, it will raise an error.<br/>
-If <code>local_exists_ok</code> is True, it will not download the file if it
-already exists locally. However, if it's False, it will download the file
-only if the hashes don't match.
-
-<note>Use this if you have a file on GCS that can't be downloaded via
-FRDCDataset.</note>
+Takes in a path glob <code>fp</code>,
+a string containing wildcards, and downloads exactly 1 file.
+If it matches 0 or more than 1 file, it will raise an error.<br/>
+It uses the configuration from <code>config</code>, which controls the behavior
+of how downloads are done. The default is usually fine. <br/>
+The download will skip if the file exists and the hash matches.
 </def>
 </deflist>

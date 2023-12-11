@@ -35,17 +35,16 @@ bounds, labels = ds.get_bounds_and_labels()
 ### What Datasets are there? {collapsible="true"}
 
 > To know what datasets are available, you can run
-> [FRDCDownloader](load.dataset.md#frdcdownloader)'s `list_gcs_datasets()`
+> [gcs.utils](load.dataset.md)'s `list_gcs_datasets()`
 > method
 
 > Note that some datasets do not have `bounds` and `labels` available as they
 > have not been annotated yet.
 > {style='warning'}
 
-```console
->>> from frdc.load.dataset import FRDCDownloader
->>> df = FRDCDownloader().list_gcs_datasets()
->>> print(df)
+```python
+from frdc.load.gcs import list_gcs_datasets 
+print(list_gcs_datasets())
 # 0  DEBUG/0
 # 1  casuarina/20220418/183deg
 # 2  casuarina/20220418/93deg
