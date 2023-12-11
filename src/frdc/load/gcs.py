@@ -47,7 +47,7 @@ def download(
         exists locally, and the hashes match, it will not download the file
 
     Args:
-        fp: Path Glob to the file in GCS. This must only match onefile.
+        fp: Path Glob to the file in GCS. This must only match one file.
         config: The GCSConfig, configures the GCS client, and behaviour.
 
     Examples:
@@ -106,11 +106,36 @@ def open_file(
     mode: str = "r",
     config: GCSConfig = GCSConfig(),
 ) -> TextIO | BytesIO:
+    """Opens a file from Google Cloud Storage.
+
+    Notes:
+        Internally, this wraps around download() and open(), it's just a
+        shortcut.
+
+    Args:
+        fp: Path Glob to the file in GCS. This must only match one file.
+        mode: The mode to open the file in, see open() for more details.
+        config: The GCSConfig, configures the GCS client, and behaviour.
+
+    Returns:
+        A file object.
+    """
     local_fp = download(fp, config)
     return open(local_fp, mode)
 
 
 def open_image(fp: str) -> Image:
+    """Opens an image from Google Cloud Storage.
+
+    Notes:
+        Internally, this wraps around open_file() and Image.open().
+
+    Args:
+        fp: Path Glob to the file in GCS. This must only match one file.
+
+    Returns:
+        A PIL Image.
+    """
     return Image.open(open_file(fp, "rb"))
 
 
