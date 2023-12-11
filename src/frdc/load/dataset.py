@@ -180,7 +180,7 @@ class FRDCDataset(Dataset):
     def get_bounds_and_labels(
         self,
         file_name="bounds.csv",
-        config: GCSConfig = GCSConfig(),
+        dl_config: GCSConfig = GCSConfig(),
     ) -> tuple[list[Rect], list[str]]:
         """Gets the bounds and labels from the bounds.csv file.
 
@@ -191,13 +191,13 @@ class FRDCDataset(Dataset):
 
         Args:
             file_name: The name of the bounds.csv file.
-            config: The download config, see GCSConfig for more details.
+            dl_config: The download config, see GCSConfig for more details.
 
         Returns:
             A tuple of (bounds, labels), where bounds is a list of
             (x0, y0, x1, y1) and labels is a list of labels.
         """
-        fp = download(fp=self.dataset_dir / file_name, config=config)
+        fp = download(fp=self.dataset_dir / file_name, config=dl_config)
         df = pd.read_csv(fp)
         return (
             [Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
