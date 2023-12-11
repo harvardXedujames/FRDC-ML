@@ -16,6 +16,30 @@ Uses GCS utils to download and load the dataset.
 It also implements useful helper functions to load FRDC-specific datasets,
 such as loading our images and labels.
 </def>
+<def title="GCSConfig">
+A configuration object that controls how downloads are done.
+See Functions below
+</def>
+</deflist>
+
+## Functions
+
+<deflist>
+<def title="download">
+Downloads a file from Google Cloud Storage. If the file already
+exists locally, and the hashes match, it will not download the file
+</def>
+<def title="list_gcs_datasets">
+Lists all datasets in the bucket as a DataFrame.
+</def>
+<def title="open_file">
+Opens a file from Google Cloud Storage. If the file already
+exists locally, and the hashes match, it will not download the file
+</def>
+<def title="open_image">
+Opens an image from Google Cloud Storage as a PIL Image.
+If the file already exists locally, and the hashes match, it will not download the file
+</def>
 </deflist>
 
 ## Usage
@@ -49,8 +73,7 @@ If you need granular control over
 Then pass in a `GCSConfig` object to `FRDCDataset`.
 
 ```python
-from frdc.load import FRDCDataset
-from frdc.load.gcs import GCSConfig
+from frdc.load import FRDCDataset, GCSConfig
 
 cfg = GCSConfig(credentials=...,
                local_dir=...,
@@ -68,7 +91,7 @@ If you have a file not easily downloadable by `FRDCDataset`, use the `gcs`
 module utility functions
 
 ```python
-from frdc.load.gcs import download
+from frdc.load import download
 
 download(fp="path/to/gcs/file")
 ```
@@ -124,7 +147,7 @@ is a list of labels.<br/>
 </def>
 </deflist>
 
-### gcs.utils
+### gcs
 
 <deflist>
 <def title="list_gcs_datasets(anchor)">
@@ -140,5 +163,13 @@ If it matches 0 or more than 1 file, it will raise an error.<br/>
 It uses the configuration from <code>config</code>, which controls the behavior
 of how downloads are done. The default is usually fine. <br/>
 The download will skip if the file exists and the hash matches.
+</def>
+<def title="open_file(fp, config)">
+<b>Opens a file from GCS.</b><br/>
+Wraps around <code>download()</code>, but returns a file handle instead.
+</def>
+<def title="open_image(fp, config)">
+<b>Opens an image from GCS as a PIL Image.</b><br/>
+Wraps around <code>download()</code>, but returns a PIL Image instead.
 </def>
 </deflist>

@@ -43,7 +43,7 @@ bounds, labels = ds.get_bounds_and_labels()
 > {style='warning'}
 
 ```python
-from frdc.load.gcs import list_gcs_datasets 
+from frdc.load import list_gcs_datasets 
 print(list_gcs_datasets())
 # 0  DEBUG/0
 # 1  casuarina/20220418/183deg

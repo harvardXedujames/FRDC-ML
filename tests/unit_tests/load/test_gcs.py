@@ -1,6 +1,6 @@
 import pytest
 
-from frdc.load.gcs import download, GCSConfig, list_gcs_datasets
+from frdc.load import download, GCSConfig, list_gcs_datasets
 
 
 def test_download_file_exist_ok(debug_file_path):

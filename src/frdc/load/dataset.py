@@ -21,7 +21,7 @@ from torchvision.transforms.v2 import (
 from frdc.conf import (
     BAND_CONFIG,
 )
-from frdc.load.gcs import GCSConfig, download
+from frdc.load import GCSConfig, download
 from frdc.preprocess.extract_segments import extract_segments_from_bounds
 from frdc.utils import Rect
 
