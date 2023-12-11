@@ -102,7 +102,7 @@ def download(
 
 
 def open_file(
-    fp: str,
+    fp: str | Path,
     mode: str = "r",
     config: GCSConfig = GCSConfig(),
 ) -> TextIO | BytesIO:
@@ -124,7 +124,7 @@ def open_file(
     return open(local_fp, mode)
 
 
-def open_image(fp: str) -> Image:
+def open_image(fp: str | Path) -> Image:
     """Opens an image from Google Cloud Storage.
 
     Notes:
