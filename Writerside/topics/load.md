@@ -1,4 +1,4 @@
-# load.dataset
+# load
 
 > You need to Set-Up [Google Cloud](Getting-Started.md#gcloud) with the
 > appropriate permissions to use this library.
@@ -23,6 +23,8 @@ See Functions below
 </deflist>
 
 ## Functions
+
+These are defined in the top-level load.gcs module.
 
 <deflist>
 <def title="download">
@@ -147,7 +149,7 @@ is a list of labels.<br/>
 </def>
 </deflist>
 
-### gcs
+### load.gcs
 
 <deflist>
 <def title="list_gcs_datasets(anchor)">

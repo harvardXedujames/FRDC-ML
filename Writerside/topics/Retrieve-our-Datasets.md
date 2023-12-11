@@ -15,7 +15,7 @@ In this tutorial, we'll learn how to :
 
 ## Retrieve the Data
 
-To retrieve the data, use [FRDCDataset](load.dataset.md#frdcdataset)
+To retrieve the data, use [FRDCDataset](load.md#frdcdataset)
 
 Here, we'll download and load our
 
@@ -35,7 +35,7 @@ bounds, labels = ds.get_bounds_and_labels()
 ### What Datasets are there? {collapsible="true"}
 
 > To know what datasets are available, you can run
-> [gcs.utils](load.dataset.md)'s `list_gcs_datasets()`
+> [load.gcs](load.md)'s `list_gcs_datasets()`
 > method
 
 > Note that some datasets do not have `bounds` and `labels` available as they
@@ -43,7 +43,7 @@ bounds, labels = ds.get_bounds_and_labels()
 > {style='warning'}
 
 ```python
-from frdc.load import list_gcs_datasets 
+from frdc.load.gcs import list_gcs_datasets 
 print(list_gcs_datasets())
 # 0  DEBUG/0
 # 1  casuarina/20220418/183deg
