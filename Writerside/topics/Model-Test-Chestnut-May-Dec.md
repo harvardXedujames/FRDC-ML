@@ -44,7 +44,7 @@ graph LR
     InceptionV3[InceptionV3 Frozen] --> FC["FC Layer(s)"]
     FC --> Softmax
     Softmax --> Output
-    Input -- Cross Entropy Loss --> Output
+    Input -- SSL Loss --> Output
 ```
 
 > We didn't find significant evidence of improvements of using a more complex
