@@ -12,7 +12,14 @@ graph LR
 
 Currently, it's heavily WIP.
 
-# Dev Info
+## Getting Started
+
+I highly recommend reading our [website documentation](
+https://fr-dc.github.io/FRDC-ML/getting-started.html
+). There contains tutorials and docs on how to use our modules.
+
+
+## Dev Info
 
 ```
 FRDC-ML/
