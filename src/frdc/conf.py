@@ -9,6 +9,11 @@ from google.cloud import storage as gcs
 
 ROOT_DIR = Path(__file__).parents[2]
 LOCAL_DATASET_ROOT_DIR = ROOT_DIR / "rsc"
+GCS_PROJECT_ID = "frmodel"
+GCS_BUCKET_NAME = "frdc-ds"
+GCS_CREDENTIALS = None
+LABEL_STUDIO_URL = "http://localhost:8080"
+LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +41,12 @@ BAND_MAX_CONFIG: dict[str, tuple[int, int]] = {
     "NIR": (0, 2**14),
 }
 
-GCS_PROJECT_ID = "frmodel"
-GCS_BUCKET_NAME = "frdc-ds"
 try:
     logger.info("Connecting to GCS...")
-    GCS_CLIENT = gcs.Client(project=GCS_PROJECT_ID, credentials=None)
+    GCS_CLIENT = gcs.Client(
+        project=GCS_PROJECT_ID,
+        credentials=GCS_CREDENTIALS,
+    )
     GCS_BUCKET = GCS_CLIENT.bucket(GCS_BUCKET_NAME)
     logger.info("Connected to GCS.")
 except Exception as e:
@@ -49,9 +55,6 @@ except Exception as e:
         "GCS_CLIENT will be None."
     )
     GCS_CLIENT = None
-
-LABEL_STUDIO_URL = "http://localhost:8080"
-LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
 
 try:
     logger.info("Connecting to Label Studio...")
