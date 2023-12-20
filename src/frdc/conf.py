@@ -9,6 +9,7 @@ from google.cloud import storage as gcs
 
 ROOT_DIR = Path(__file__).parents[2]
 LOCAL_DATASET_ROOT_DIR = ROOT_DIR / "rsc"
+os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
 GCS_PROJECT_ID = "frmodel"
 GCS_BUCKET_NAME = "frdc-ds"
 GCS_CREDENTIALS = None
