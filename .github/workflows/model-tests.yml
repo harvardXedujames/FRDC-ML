@@ -79,7 +79,7 @@ jobs:
       - name: Run Model Training
         working-directory: ${{ github.workspace }}/tests
         run: |
-          git config --global --add safe.directory /__w/FRDC-ML/FRDC-ML'
+          git config --global --add safe.directory /__w/FRDC-ML/FRDC-ML
           python3 -m model_tests.chestnut_dec_may.train
 
       - name: Comment results via CML
