@@ -21,10 +21,14 @@ jobs:
         # This mounts and persists the venv between runs
         - /home/runner/work/frdc-ml/_github_home:/root
         # This mounts the resources folder
-#        - /home/runner/work/frdc-ml/_github_home/rsc:/__w/FRDC-ML/FRDC-ML/rsc
+        # - /home/runner/work/frdc-ml/_github_home/rsc:/__w/FRDC-ML/FRDC-ML/rsc
       env:
         # This is where setup-python will install and cache the venv
         AGENT_TOOLSDIRECTORY: "/root/venv"
+
+        # This uses the host's exposed services
+        LABEL_STUDIO_HOST: "host.docker.internal"
+        LABEL_STUDIO_API_KEY: "${{ secrets.LABEL_STUDIO_API_KEY }}"
 
       options: --gpus all
     steps:

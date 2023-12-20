@@ -15,7 +15,8 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
 GCS_PROJECT_ID = "frmodel"
 GCS_BUCKET_NAME = "frdc-ds"
 GCS_CREDENTIALS = None
-LABEL_STUDIO_URL = "http://label-studio:8080"
+LABEL_STUDIO_HOST = os.environ.get("LABEL_STUDIO_HOST", "localhost")
+LABEL_STUDIO_URL = f"http://{LABEL_STUDIO_HOST}:8080"
 
 if not (LABEL_STUDIO_API_KEY := os.environ.get("LABEL_STUDIO_API_KEY", None)):
     logger.warning("LABEL_STUDIO_API_KEY not set")
