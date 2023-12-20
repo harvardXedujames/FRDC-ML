@@ -14,17 +14,19 @@ on:
 
 jobs:
   build:
-
     runs-on: self-hosted
     container:
       image: docker://ghcr.io/iterative/cml:0-dvc2-base1-gpu
       volumes:
+        # This mounts and persists the venv between runs
         - /home/runner/work/frdc-ml/_github_home:/root
+        # This mounts the resources folder
+        - /home/runner/work/frdc-ml/_github_home/rsc:/__w/FRDC-ML/FRDC-ML/rsc
       env:
         # This is where setup-python will install and cache the venv
         AGENT_TOOLSDIRECTORY: "/root/venv"
-      options: --gpus all
 
+      options: --gpus all --network label-studio
     steps:
       - uses: actions/checkout@v3
 
@@ -74,6 +76,7 @@ jobs:
       - name: Run Model Training
         working-directory: ${{ github.workspace }}/tests
         run: |
+          git config --global --add safe.directory /__w/FRDC-ML/FRDC-ML'
           python3 -m model_tests.chestnut_dec_may.train
 
       - name: Comment results via CML
