@@ -61,21 +61,20 @@ jobs:
         run: |
           echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" >> $GITHUB_ENV
 
-      # Our project has src as a source path, explicitly add that in.
-      - name: Add src as PYTHONPATH
-        run: |
-          echo "PYTHONPATH=src" >> $GITHUB_ENV
+      - name: Add directories to PYTHONPATH
+        run: >
+          echo "PYTHONPATH=${{ github.workspace }}/src:\
+          ${{ github.workspace }}/tests" >> $GITHUB_ENV
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      # Do not do cd as it'll break PYTHONPATH.
       - name: Run Model Training
+        working-directory: ${{ github.workspace }}/tests
         run: |
-          sleep 1000
-          python3 -m tests.model_tests.chestnut_dec_may.train
+          python3 -m model_tests.chestnut_dec_may.train
 
       - name: Comment results via CML
         run: |
