@@ -87,7 +87,7 @@ def open_file(
     Args:
         fp: Path Glob to the file in GCS. This must only match one file.
         mode: The mode to open the file in, see open() for more details.
-        config: The GCSConfig, configures the GCS client, and behaviour.
+        local_cache_dir: The local cache directory to download the file to.
 
     Returns:
         A file object.
@@ -122,7 +122,6 @@ def list_gcs_datasets(
                 to find the dataset for
                 "chestnut_nature_park/20201218/183deg/result_Red.tif",
                 then we can use "result_Red.tif" as the anchor file.
-        config: The GCSConfig, configures the GCS client, and behaviour.
 
     Returns:
         An iterator of all blobs that match the anchor file.
