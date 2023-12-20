@@ -17,6 +17,7 @@ matplotlib = "^3.7.3"
 google-cloud-storage = "^2.10.0"
 tqdm = "^4.66.1"
 xxhash = "^3.4.1"
+label-studio-sdk = "^0.0.32"
 
 #torch = {version="^2.1.0", source="pytorch"}
 #torchvision = {version="^0.16.0", source="pytorch"}
