@@ -21,6 +21,8 @@ services:
     #   Optional: Override nginx default conf
     #      - ./deploy/my.conf:/etc/nginx/nginx.conf
     command: nginx
+    networks:
+      - label-studio
 
   app:
     stdin_open: true
@@ -45,6 +47,8 @@ services:
     volumes:
       - ./mydata:/label-studio/data:rw
     command: label-studio-uwsgi
+    networks:
+      - label-studio
 
   db:
     image: postgres:11.5
@@ -64,3 +68,10 @@ services:
     volumes:
       - ${POSTGRES_DATA_DIR:-./postgres-data}:/var/lib/postgresql/data
       - ./deploy/pgsql/certs:/var/lib/postgresql/certs:ro
+    networks:
+      - label-studio
+
+networks:
+  label-studio:
+    name: label-studio
+#    driver: bridge
