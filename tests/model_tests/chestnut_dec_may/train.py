@@ -114,8 +114,8 @@ def main(
 
     with open(Path(__file__).parent / "report.md", "w") as f:
         f.write(
-            f"# Chestnut Nature Park (Dec 2020 vs May 2021)"
-            f"[WandB Report]({run.get_url()})"
+            f"# Chestnut Nature Park (Dec 2020 vs May 2021)\n"
+            f"- Results: [WandB Report]({run.get_url()})"
         )
 
     fig, acc = evaluate(
