@@ -1,15 +1,23 @@
-import os
-import warnings
+import logging
+from pathlib import Path
 from warnings import warn
 
-from label_studio_sdk import Client
 from label_studio_sdk.data_manager import Filters, Column, Type, Operator
 
-LABEL_STUDIO_URL = "http://localhost:8080"
-API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
+from frdc.conf import LABEL_STUDIO_CLIENT
 
-client = Client(url=LABEL_STUDIO_URL, api_key=API_KEY)
-client.check_connection()
+# try:
+#     client.check_connection()
+# except ConnectionError:
+#     raise ConnectionError(
+#         f"Could not connect to Label Studio at {LABEL_STUDIO_URL}. "
+#         "This uses Label Studio's check_connection() method,"
+#         "which performs retries. "
+#         "Use utils.is_label_studio_up() as a faster alternative to check if "
+#         "Label Studio is up."
+#     )
+
+logger = logging.getLogger(__name__)
 
 
 class Task(dict):
@@ -37,7 +45,7 @@ class Task(dict):
                 # Only take the first label as this is not a multi-label task
                 r["label"] = r.pop("polygonlabels")[0]
                 if not r["closed"]:
-                    warnings.warn(
+                    logger.warning(
                         f"Label for {r['label']} @ {r['points']} not closed. "
                         f"Skipping"
                     )
@@ -50,10 +58,10 @@ class Task(dict):
 
 
 def get_task(
-    file_name: str = "chestnut_nature_park/20201218/result.jpg",
+    file_name: Path | str = "chestnut_nature_park/20201218/result.jpg",
     project_id: int = 1,
 ):
-    proj = client.get_project(project_id)
+    proj = LABEL_STUDIO_CLIENT.get_project(project_id)
     # Get the task that has the file name
     filter = Filters.create(
         Filters.AND,
@@ -63,7 +71,7 @@ def get_task(
                 Column.data("image"),
                 Operator.CONTAINS,
                 Type.String,
-                file_name,
+                Path(file_name).as_posix(),
             )
         ],
     )

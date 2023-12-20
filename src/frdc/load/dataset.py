@@ -11,19 +11,20 @@ import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import Dataset, ConcatDataset
-from torchvision.transforms.v2 import (
-    Compose,
-    ToImage,
-    ToDtype,
-    Resize,
-)
 
 from frdc.conf import (
     BAND_CONFIG,
+    LABEL_STUDIO_CLIENT,
 )
-from frdc.load.gcs import GCSConfig, download
-from frdc.preprocess.extract_segments import extract_segments_from_bounds
+from frdc.load.gcs import download
+from frdc.load.label_studio import get_task
+from frdc.preprocess.extract_segments import (
+    extract_segments_from_bounds,
+    extract_segments_from_polybounds,
+)
 from frdc.utils import Rect
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -35,6 +36,7 @@ class FRDCDataset(Dataset):
         version: str | None,
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
+        use_legacy_bounds: bool = False,
     ):
         """Initializes the FRDC Dataset.
 
@@ -42,14 +44,29 @@ class FRDCDataset(Dataset):
             site: The site of the dataset, e.g. "chestnut_nature_park".
             date: The date of the dataset, e.g. "20201218".
             version: The version of the dataset, e.g. "183deg".
+            transform: The transform to apply to each segment.
+            target_transform: The transform to apply to each label.
+            use_legacy_bounds: Whether to use the legacy bounds.csv file.
         """
         self.site = site
         self.date = date
         self.version = version
 
         self.ar, self.order = self.get_ar_bands()
-        bounds, self.targets = self.get_bounds_and_labels()
-        self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
+
+        if use_legacy_bounds or (LABEL_STUDIO_CLIENT is None):
+            logger.warning(
+                "Using legacy bounds.csv file for dataset."
+                "This is pending to be deprecated in favour of pulling "
+                "annotations from Label Studio."
+            )
+            bounds, self.targets = self.get_bounds_and_labels()
+            self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
+        else:
+            bounds, self.targets = self.get_polybounds_and_labels()
+            self.ar_segments = extract_segments_from_polybounds(
+                self.ar, bounds, cropped=True, polycropped=False
+            )
         self.transform = transform
         self.target_transform = target_transform
 
@@ -74,6 +91,13 @@ class FRDCDataset(Dataset):
             A dictionary of the dataset, with keys as the filenames and values
             as the images.
         """
+        from torchvision.transforms.v2 import (
+            Compose,
+            ToImage,
+            ToDtype,
+            Resize,
+        )
+
         return FRDCDataset(
             site="DEBUG",
             date="0",
@@ -98,7 +122,6 @@ class FRDCDataset(Dataset):
     def get_ar_bands_as_dict(
         self,
         bands: Iterable[str] = BAND_CONFIG.keys(),
-        dl_config: GCSConfig = GCSConfig(),
     ) -> dict[str, np.ndarray]:
         """Gets the bands from the dataset as a dictionary of (name, image)
 
@@ -109,7 +132,6 @@ class FRDCDataset(Dataset):
         Args:
             bands: The bands to get, e.g. ['WB', 'WG', 'WR']. By default, this
                 get all bands in BAND_CONFIG.
-            dl_config: The download config, see GCSConfig for more details.
 
         Examples:
             >>> get_ar_bands_as_dict(['WB', 'WG', 'WR']])
@@ -132,7 +154,7 @@ class FRDCDataset(Dataset):
             )
 
         for name, (glob, transform) in config.items():
-            fp = download(fp=self.dataset_dir / glob, config=dl_config)
+            fp = download(fp=self.dataset_dir / glob)
 
             # We may use the same file multiple times, so we cache it
             if fp in fp_cache:
@@ -150,7 +172,6 @@ class FRDCDataset(Dataset):
     def get_ar_bands(
         self,
         bands: Iterable[str] = BAND_CONFIG.keys(),
-        dl_config: GCSConfig = GCSConfig(),
     ) -> tuple[np.ndarray, list[str]]:
         """Gets the bands as a numpy array, and the band order as a list.
 
@@ -160,7 +181,6 @@ class FRDCDataset(Dataset):
         Args:
             bands: The bands to get, e.g. ['WB', 'WG', 'WR']. By default, this
                 get all bands in BAND_CONFIG.
-            dl_config: The download config, see GCSConfig for more details.
 
         Examples
             >>> get_ar_bands(['WB', 'WG', 'WR'])
@@ -174,13 +194,12 @@ class FRDCDataset(Dataset):
             (H, W, C) and band_order is a list of band names.
         """
 
-        d: dict[str, np.ndarray] = self.get_ar_bands_as_dict(bands, dl_config)
+        d: dict[str, np.ndarray] = self.get_ar_bands_as_dict(bands)
         return np.concatenate(list(d.values()), axis=-1), list(d.keys())
 
     def get_bounds_and_labels(
         self,
         file_name="bounds.csv",
-        dl_config: GCSConfig = GCSConfig(),
     ) -> tuple[list[Rect], list[str]]:
         """Gets the bounds and labels from the bounds.csv file.
 
@@ -191,18 +210,22 @@ class FRDCDataset(Dataset):
 
         Args:
             file_name: The name of the bounds.csv file.
-            dl_config: The download config, see GCSConfig for more details.
 
         Returns:
             A tuple of (bounds, labels), where bounds is a list of
             (x0, y0, x1, y1) and labels is a list of labels.
         """
-        fp = download(fp=self.dataset_dir / file_name, config=dl_config)
+        fp = download(fp=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
         return (
             [Rect(i.x0, i.y0, i.x1, i.y1) for i in df.itertuples()],
             df["name"].tolist(),
         )
+
+    def get_polybounds_and_labels(self):
+        return get_task(
+            Path(f"{self.dataset_dir}/result.jpg")
+        ).get_bounds_and_labels()
 
     @staticmethod
     def _load_image(path: Path | str) -> np.ndarray:
