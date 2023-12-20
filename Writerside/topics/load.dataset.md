@@ -62,17 +62,4 @@ d = ds.get_ar_bands_as_dict(bands=['WR', 'WG', 'WB'])
 
 This will also alter the channel order to the order of the bands provided.
 
-## Custom GCS Configurations
-
-For any custom GCS configurations, you can pass in a `dl_config` argument to
-the `get_*` functions. See [load.gcs](load.gcs.md) for more information.
-
-```python
-from frdc.load import FRDCDataset
-from frdc.load.gcs import GCSConfig
-
-ds = FRDCDataset(site='chestnut_nature_park',
-                 date='20201218',
-                 version=None)
-ds.get_ar_bands(dl_config=GCSConfig(...))
-```
+See [load.gcs](load.gcs.md#configuration) for configuration options.

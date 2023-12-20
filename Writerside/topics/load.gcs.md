@@ -71,39 +71,22 @@ If you need granular control over
 - the project used
 - the bucket used
 
-Then pass in a `GCSConfig` object to the utility functions.
-
-```python
-from frdc.load.gcs import download, GCSConfig
-
-cfg = GCSConfig(credentials=...,
-                local_dir=...,
-                project_id=...,
-                bucket_name=...,
-                local_exists_ok=...)
-fp = download(fp="path/to/gcs/file", config=cfg)
-```
+Then edit `conf.py`.
 
 <deflist>
-<def title="credentials">
+<def title="GCS_CREDENTIALS">
 <b>Google Cloud credentials.</b><br/>
 A <code>google.oauth2.service_account.Credentials</code> object. See the object
 documentation for more information.
 </def>
-<def title="local_dir">
+<def title="LOCAL_DATASET_ROOT_DIR">
 <b>Local directory to download files to.</b><br/>
 Path to a directory, or a <code>Path</code> object.
 </def>
-<def title="project_id">
+<def title="GCS_PROJECT_ID">
 <b>Google Cloud project ID.</b><br/>
 </def>
-<def title="bucket_name">
+<def title="GCS_BUCKET_NAME">
 <b>Google Cloud Storage bucket name.</b><br/>
 </def>
-<def title="local_exists_ok">
-<b>Whether to skip downloading if the file exists locally.</b><br/>
-If <code>True</code>, it will skip downloading if the file exists locally.
-If <code>False</code>, it will raise an error if the file exists locally.
-</def>
-
 </deflist>

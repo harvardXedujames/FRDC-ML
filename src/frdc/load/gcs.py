@@ -3,52 +3,29 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
-from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
 from typing import TextIO
 
 import pandas as pd
 from PIL import Image
-from google.cloud import storage
-from google.oauth2.service_account import Credentials
 
 from frdc.conf import (
     LOCAL_DATASET_ROOT_DIR,
-    GCS_PROJECT_ID,
-    GCS_BUCKET_NAME,
+    GCS_BUCKET,
 )
-
-
-@dataclass
-class GCSConfig:
-    credentials: Credentials = None
-    local_dir: Path = LOCAL_DATASET_ROOT_DIR
-    project_id: str = GCS_PROJECT_ID
-    bucket_name: str = GCS_BUCKET_NAME
-    local_exists_ok: bool = True
-    client: storage.Client = field(init=False)
-    bucket: storage.Bucket = field(init=False)
-
-    def __post_init__(self):
-        # If credentials is None, then use the default credentials.
-        # See the Google ADC documentation on how to set up.
-        self.client = storage.Client(
-            project=self.project_id, credentials=self.credentials
-        )
-        self.bucket = self.client.bucket(self.bucket_name)
 
 
 def download(
     fp: str | Path,
-    config: GCSConfig = GCSConfig(),
+    local_cache_dir: Path = LOCAL_DATASET_ROOT_DIR,
 ) -> Path:
     """Downloads a file from Google Cloud Storage. If the file already
         exists locally, and the hashes match, it will not download the file
 
     Args:
         fp: Path Glob to the file in GCS. This must only match one file.
-        config: The GCSConfig, configures the GCS client, and behaviour.
+        local_cache_dir: The local cache directory to download the file to.
 
     Examples:
         If our file in GCS is in
@@ -69,7 +46,7 @@ def download(
         The local path to the downloaded file.
     """
 
-    gcs_blobs = list(config.bucket.list_blobs(match_glob=Path(fp).as_posix()))
+    gcs_blobs = list(GCS_BUCKET.list_blobs(match_glob=Path(fp).as_posix()))
 
     if len(gcs_blobs) > 1:
         raise ValueError(f"Multiple blobs found for {fp}: {gcs_blobs}")
@@ -78,7 +55,7 @@ def download(
 
     # Get the local path and the GCS blob
     gcs_blob = gcs_blobs[0]
-    local_path = config.local_dir / gcs_blob.name
+    local_path = local_cache_dir / gcs_blob.name
 
     # If locally exists & hashes match, return False
     if local_path.exists():
@@ -87,12 +64,7 @@ def download(
         local_hash = hashlib.md5(open(local_path, "rb").read()).hexdigest()
         logging.debug(f"Local hash: {local_hash}, GCS hash: {gcs_hash}")
         if gcs_hash == local_hash:
-            if config.local_exists_ok:
-                return local_path
-            else:
-                raise FileExistsError(
-                    f"{local_path} already exists and hashes match."
-                )
+            return local_path
 
     # Else, download
     logging.info(f"Downloading {gcs_blob.name} to {local_path}...")
@@ -104,7 +76,7 @@ def download(
 def open_file(
     fp: str | Path,
     mode: str = "r",
-    config: GCSConfig = GCSConfig(),
+    local_cache_dir: Path = LOCAL_DATASET_ROOT_DIR,
 ) -> TextIO | BytesIO:
     """Opens a file from Google Cloud Storage.
 
@@ -115,12 +87,12 @@ def open_file(
     Args:
         fp: Path Glob to the file in GCS. This must only match one file.
         mode: The mode to open the file in, see open() for more details.
-        config: The GCSConfig, configures the GCS client, and behaviour.
+        local_cache_dir: The local cache directory to download the file to.
 
     Returns:
         A file object.
     """
-    local_fp = download(fp, config)
+    local_fp = download(fp, local_cache_dir)
     return open(local_fp, mode)
 
 
@@ -141,7 +113,6 @@ def open_image(fp: str | Path) -> Image:
 
 def list_gcs_datasets(
     anchor="result_Red.tif",
-    config: GCSConfig = GCSConfig(),
 ) -> pd.DataFrame:
     """Lists all datasets from Google Cloud Storage.
 
@@ -151,7 +122,6 @@ def list_gcs_datasets(
                 to find the dataset for
                 "chestnut_nature_park/20201218/183deg/result_Red.tif",
                 then we can use "result_Red.tif" as the anchor file.
-        config: The GCSConfig, configures the GCS client, and behaviour.
 
     Returns:
         An iterator of all blobs that match the anchor file.
@@ -165,7 +135,7 @@ def list_gcs_datasets(
         pd.Series(
             [
                 blob.name
-                for blob in config.bucket.list_blobs(match_glob=f"**/{anchor}")
+                for blob in GCS_BUCKET.list_blobs(match_glob=f"**/{anchor}")
             ]
         )
         # Remove the anchor file name
