@@ -7,6 +7,8 @@ import label_studio_sdk as label_studio
 import requests
 from google.cloud import storage as gcs
 
+logger = logging.getLogger(__name__)
+
 ROOT_DIR = Path(__file__).parents[2]
 LOCAL_DATASET_ROOT_DIR = ROOT_DIR / "rsc"
 os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
@@ -14,9 +16,9 @@ GCS_PROJECT_ID = "frmodel"
 GCS_BUCKET_NAME = "frdc-ds"
 GCS_CREDENTIALS = None
 LABEL_STUDIO_URL = "http://localhost:8080"
-LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
 
-logger = logging.getLogger(__name__)
+if not (LABEL_STUDIO_API_KEY := os.environ.get("LABEL_STUDIO_API_KEY", None)):
+    logger.warning("LABEL_STUDIO_API_KEY not set")
 
 BAND_CONFIG = OrderedDict(
     {
