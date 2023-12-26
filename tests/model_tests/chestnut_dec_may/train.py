@@ -4,7 +4,10 @@ This test is done by training a model on the 20201218 dataset, then testing on
 the 20210510 dataset.
 """
 
-import os
+# Uncomment this to run the W&B monitoring locally
+# import os
+# os.environ["WANDB_MODE"] = "offline"
+
 from pathlib import Path
 
 import lightning as pl
