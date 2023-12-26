@@ -1,8 +1,7 @@
 {
   "name": "frdc",
   "build": {
-    "context": "../",
-    "dockerfile": "Dockerfile",
+    "dockerfile": "../Dockerfile",
   },
   "containerEnv": {
     "LABEL_STUDIO_HOST": "host.docker.internal",
