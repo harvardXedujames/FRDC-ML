@@ -7,7 +7,8 @@ RUN apt-get update
 RUN apt-get install git -y
 
 RUN pip3 install --upgrade pip && \
-    pip3 install poetry
+    pip3 install poetry && \
+    pip3 install lightning
 
 RUN conda init bash \
     && . ~/.bashrc \
