@@ -10,7 +10,7 @@
     </step>
     <step>Start by cloning our repository.
         <code-block lang="shell">
-          git clone https://github.com/Forest-Recovery-Digital-Companion/FRDC-ML.git
+          git clone https://github.com/FR-DC/FRDC-ML.git
         </code-block>
     </step>
     <step>Then, create a Python Virtual Env <code>pyvenv</code>
@@ -60,6 +60,26 @@
     </step>
 </procedure>
 
+<procedure title="Use a Dev. Container" id="install-dev-con">
+    <tip>
+        Only use Dev. Containers if you're familiar with your IDEs, it's highly
+        dependent on clicking around the IDE.
+    </tip>
+    <warning>Do not set up a new environment, it'll be included in the environment.</warning>
+    <step>
+        Ensure that you have installed pre-requisites for respective IDEs. 
+        <a href="https://code.visualstudio.com/docs/remote/containers#_system-requirements"> VSCode </a>
+        <a href="https://www.jetbrains.com/help/idea/prerequisites-for-dev-containers.html"> IntelliJ </a>
+    </step>
+    <step>Start by cloning our repository.
+        <code-block lang="shell">
+          git clone https://github.com/FR-DC/FRDC-ML.git
+        </code-block>
+    </step>
+    <step>Follow steps for respective IDEs to set up the Dev. Container.</step>
+    <step>Activate the virtual environment. The venv is located in <code>/opt/venv</code></step>
+</procedure>
+
 <procedure title="Setting Up Google Cloud" id="gcloud">
     <step>
         We use Google Cloud to store our datasets. To set up Google Cloud,
@@ -86,6 +106,49 @@
     </step>
 </procedure>
 
+<procedure title="Setting Up Label Studio" id="ls">
+    <tip>This is only necessary if any task requires Label Studio annotations</tip>
+    <step>
+        We use Label Studio to annotate our datasets.
+        We won't go through how to install Label Studio, for contributors, it
+        should be up on <code>localhost:8080</code>.
+    </step>
+    <step>
+        Then, retrieve your own API key from Label Studio.
+        <a href="http://localhost:8080/user/account"> Go to your account page </a>
+        and copy the API key. <br/></step>
+    <step> Set your API key as an environment variable.
+        <tabs>
+<tab title="Windows">
+        In Windows, go to "Edit environment variables for
+        your account" and add this as a new environment variable with name
+        <code>LABEL_STUDIO_API_KEY</code>.
+</tab>
+<tab title="Linux">
+        Export it as an environment variable.
+        <code-block lang="shell">export LABEL_STUDIO_API_KEY=...</code-block>
+</tab>
+</tabs>
+    </step>
+</procedure>
+
+
+<procedure title="Setting Up Weight and Biases" id="wandb">
+    <step>
+        We use W&B to track our experiments. To set up W&B,
+        <a href="https://docs.wandb.ai/quickstart">
+          install the W&B CLI
+        </a>
+    </step>
+    <step>
+        Then, 
+        <a href="https://docs.wandb.ai/quickstart">
+          authenticate your account
+        </a>.
+        <code-block lang="shell">wandb login</code-block>
+    </step>
+</procedure>
+
 <procedure title="Pre-commit Hooks" collapsible="true">
     <note>This is optional but recommended.
     Pre-commit hooks are a way to ensure that your code is formatted correctly.
@@ -98,30 +161,45 @@
     </step>
 </procedure>
 
-<procedure title="Running the Tests" collapsible="true" id="tests">
+<procedure title="Running the Tests" id="tests">
     <step>
         Run the tests to make sure everything is working
         <code-block lang="shell">
             pytest
         </code-block>
     </step>
-<step>
-    In case of errors:
-    <deflist>
-        <def title="google.auth.exceptions.DefaultCredentialsError">
-            If you get this error, it means that you haven't authenticated your
-            Google Cloud account.
-            See <a anchor="gcloud">Setting Up Google Cloud</a>
-        </def>
-        <def title="ModuleNotFoundError" collapsible="true">
-            If you get this error, it means that you haven't installed the
-            dependencies.
-            See <a anchor="install">Installing the Dev. Environment</a>
-        </def>
-    </deflist>
-</step>
 </procedure>
 
+## Troubleshooting
+
+### ModuleNotFoundError
+
+It's likely that your `src` and `tests` directories are not in `PYTHONPATH`.
+To fix this, run the following command:
+
+```shell
+export PYTHONPATH=$PYTHONPATH:./src:./tests
+```
+
+Or, set it in your IDE, for example, IntelliJ allows setting directories as
+**Source Roots**.
+
+### google.auth.exceptions.DefaultCredentialsError
+
+It's likely that you haven't authenticated your Google Cloud account.
+See [Setting Up Google Cloud](#gcloud)
+
+### Couldn't connect to Label Studio
+
+Label Studio must be running locally, exposed on `localhost:8080`. Furthermore,
+you need to specify the `LABEL_STUDIO_API_KEY` environment variable. See 
+[Setting Up Label Studio](#ls)
+
+### Cannot login to W&B
+
+You need to authenticate your W&B account. See [Setting Up Weight and Biases](#wandb)
+If you're facing difficulties, set the `WANDB_MODE` environment variable to `offline`
+to disable W&B.
 
 ## Our Repository Structure
 
@@ -132,7 +210,6 @@ help you understand where to put your code.
 graph LR
     FRDC -- " Core Dependencies " --> src/frdc/
     FRDC -- " Resources " --> rsc/
-    FRDC -- " Pipeline " --> pipeline/
     FRDC -- " Tests " --> tests/
     FRDC -- " Repo Dependencies " --> pyproject.toml,poetry.lock
     src/frdc/ -- " Dataset Loaders " --> ./load/
@@ -140,7 +217,6 @@ graph LR
     src/frdc/ -- " Train Deps " --> ./train/
     src/frdc/ -- " Model Architectures " --> ./models/
     rsc/ -- " Datasets ... " --> ./dataset_name/
-    pipeline/ -- " Model Training Pipeline " --> ./model_tests/
 ```
 
 src/frdc/
@@ -149,11 +225,8 @@ src/frdc/
 rsc/
 : Resources. These are usually cached datasets
 
-pipeline/
-: Pipeline code. These are the full ML tests of our pipeline.
-
 tests/
-: PyTest tests. These are unit tests & integration tests.
+: PyTest tests. These are unit, integration, and model tests.
 
 ### Unit, Integration, and Pipeline Tests
 
@@ -161,7 +234,7 @@ We have 3 types of tests:
 
 - Unit Tests are usually small, single function tests.
 - Integration Tests are larger tests that tests a mock pipeline.
-- Pipeline Tests are the true production pipeline tests that will generate a
+- Model Tests are the true production pipeline tests that will generate a
   model.
 
 ### Where Should I contribute?
@@ -176,9 +249,9 @@ at the <code>src/frdc/</code> directory.
 By adding a new component, you'll need to add a new test. Take a look at the
 <code>tests/</code> directory.
 </def>
-<def title="Changing the pipeline">
+<def title="Changing the model pipeline">
 If you're a ML Researcher, you'll probably be changing the pipeline. Take a
-look at the <code>pipeline/</code> directory.
+look at the <code>tests/model_tests/</code> directory.
 </def>
 <def title="Adding a dependency">
 If you're adding a new dependency, use <code>poetry add PACKAGE</code> and
