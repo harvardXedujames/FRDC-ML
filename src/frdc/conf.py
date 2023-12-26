@@ -61,6 +61,7 @@ except Exception as e:
         "GCS_CLIENT will be None."
     )
     GCS_CLIENT = None
+    GCS_BUCKET = None
 
 try:
     logger.info("Connecting to Label Studio...")
