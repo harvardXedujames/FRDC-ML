@@ -3,7 +3,7 @@ WORKDIR /devcontainer
 
 COPY ./pyproject.toml /devcontainer/pyproject.toml
 
-RUN apt update && apt upgrade
+RUN apt update -y && apt upgrade -y
 RUN apt install git -y
 
 RUN pip3 install --upgrade pip && \
