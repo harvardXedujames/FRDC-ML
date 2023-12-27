@@ -1,5 +1,7 @@
 # Getting Started
 
+> Want to use a Dev Container? See [Get Started with Dev Containers](Get-Started-with-Dev-Containers.md)
+
 <procedure title="Installing the Dev. Environment" id="install">
     <step>Ensure that you have the right version of Python.
         The required Python version can be seen in <code>pyproject.toml</code>
@@ -60,25 +62,6 @@
     </step>
 </procedure>
 
-<procedure title="Use a Dev. Container" id="install-dev-con">
-    <tip>
-        Only use Dev. Containers if you're familiar with your IDEs, it's highly
-        dependent on clicking around the IDE.
-    </tip>
-    <warning>Do not set up a new environment, it'll be included in the environment.</warning>
-    <step>
-        Ensure that you have installed pre-requisites for respective IDEs. 
-        <a href="https://code.visualstudio.com/docs/remote/containers#_system-requirements"> VSCode </a>
-        <a href="https://www.jetbrains.com/help/idea/prerequisites-for-dev-containers.html"> IntelliJ </a>
-    </step>
-    <step>Start by cloning our repository.
-        <code-block lang="shell">
-          git clone https://github.com/FR-DC/FRDC-ML.git
-        </code-block>
-    </step>
-    <step>Follow steps for respective IDEs to set up the Dev. Container.</step>
-    <step>Activate the virtual environment. The venv is located in <code>/opt/venv</code></step>
-</procedure>
 
 <procedure title="Setting Up Google Cloud" id="gcloud">
     <step>
@@ -131,7 +114,6 @@
 </tabs>
     </step>
 </procedure>
-
 
 <procedure title="Setting Up Weight and Biases" id="wandb">
     <step>
