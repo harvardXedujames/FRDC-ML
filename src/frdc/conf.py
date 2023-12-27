@@ -56,9 +56,12 @@ try:
 except Exception as e:
     logger.warning(
         "Could not connect to GCS. Will not be able to download files. "
+        "Check that you've (1) Installed the GCS CLI and (2) Set up the"
+        "ADC with `gcloud auth application-default login`. "
         "GCS_CLIENT will be None."
     )
     GCS_CLIENT = None
+    GCS_BUCKET = None
 
 try:
     logger.info("Connecting to Label Studio...")
