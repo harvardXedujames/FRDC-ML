@@ -7,15 +7,19 @@ import label_studio_sdk as label_studio
 import requests
 from google.cloud import storage as gcs
 
+logger = logging.getLogger(__name__)
+
 ROOT_DIR = Path(__file__).parents[2]
 LOCAL_DATASET_ROOT_DIR = ROOT_DIR / "rsc"
+os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
 GCS_PROJECT_ID = "frmodel"
 GCS_BUCKET_NAME = "frdc-ds"
 GCS_CREDENTIALS = None
-LABEL_STUDIO_URL = "http://localhost:8080"
-LABEL_STUDIO_API_KEY = os.environ["LABEL_STUDIO_API_KEY"]
+LABEL_STUDIO_HOST = os.environ.get("LABEL_STUDIO_HOST", "localhost")
+LABEL_STUDIO_URL = f"http://{LABEL_STUDIO_HOST}:8080"
 
-logger = logging.getLogger(__name__)
+if not (LABEL_STUDIO_API_KEY := os.environ.get("LABEL_STUDIO_API_KEY", None)):
+    logger.warning("LABEL_STUDIO_API_KEY not set")
 
 BAND_CONFIG = OrderedDict(
     {
@@ -52,9 +56,12 @@ try:
 except Exception as e:
     logger.warning(
         "Could not connect to GCS. Will not be able to download files. "
+        "Check that you've (1) Installed the GCS CLI and (2) Set up the"
+        "ADC with `gcloud auth application-default login`. "
         "GCS_CLIENT will be None."
     )
     GCS_CLIENT = None
+    GCS_BUCKET = None
 
 try:
     logger.info("Connecting to Label Studio...")
