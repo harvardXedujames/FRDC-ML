@@ -11,6 +11,12 @@ import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import Dataset, ConcatDataset
+from torchvision.transforms.v2 import (
+    Compose,
+    ToImage,
+    ToDtype,
+    Resize,
+)
 
 from frdc.conf import (
     BAND_CONFIG,
@@ -247,14 +253,6 @@ def dataset(site: str, date: str, version: str | None) -> FRDCDatasetPartial:
         )
 
     return inner
-
-
-from torchvision.transforms.v2 import (
-    Compose,
-    ToImage,
-    ToDtype,
-    Resize,
-)
 
 
 @dataclass
