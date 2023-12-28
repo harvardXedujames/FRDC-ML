@@ -33,6 +33,20 @@ from frdc.utils import Rect
 logger = logging.getLogger(__name__)
 
 
+# This is not yet used much as we don't have sufficient training data.
+class FRDCConcatDataset(ConcatDataset):
+    def __init__(self, datasets: list[FRDCDataset]):
+        super().__init__(datasets)
+        self.datasets: list[FRDCDataset] = datasets
+
+    @property
+    def targets(self):
+        return [t for ds in self.datasets for t in ds.targets]
+
+    def __add__(self, other: FRDCDataset) -> FRDCConcatDataset:
+        return FRDCConcatDataset([*self.datasets, other])
+
+
 @dataclass
 class FRDCDataset(Dataset):
     def __init__(
@@ -63,6 +77,7 @@ class FRDCDataset(Dataset):
         self.version = version
 
         self.ar, self.order = self.get_ar_bands()
+        self.targets = None
 
         if use_legacy_bounds or (LABEL_STUDIO_CLIENT is None):
             logger.warning(
@@ -227,6 +242,9 @@ class FRDCDataset(Dataset):
         ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
 
+    def __add__(self, other) -> FRDCConcatDataset:
+        return FRDCConcatDataset([self, other])
+
 
 class FRDCDatasetPartial(Protocol):
     """This class is used to provide type hints for FRDCDatasetPreset."""
@@ -296,18 +314,3 @@ class FRDCUnlabelledDataset(FRDCDataset):
             if self.transform
             else self.ar_segments[item]
         )
-
-
-# This is not yet used much as we don't have sufficient training data.
-class FRDCConcatDataset(ConcatDataset):
-    def __init__(self, datasets: list[FRDCDataset]):
-        super().__init__(datasets)
-        self.datasets = datasets
-
-    def __getitem__(self, idx):
-        x, y = super().__getitem__(idx)
-        return x, y
-
-    @property
-    def targets(self):
-        return [t for ds in self.datasets for t in ds.targets]
