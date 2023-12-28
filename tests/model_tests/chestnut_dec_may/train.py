@@ -22,7 +22,7 @@ from lightning.pytorch.loggers import WandbLogger
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
 from frdc.load import FRDCDataset
-from frdc.load.dataset import FRDCUnlabelledDataset
+from frdc.load.dataset import FRDCUnlabelledDataset, FRDCDatasetPreset
 from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 from frdc.train.frdc_datamodule import FRDCDataModule
 from model_tests.utils import (
@@ -44,11 +44,8 @@ def main(
     run = wandb.init()
     logger = WandbLogger(name="chestnut_dec_may", project="frdc")
     # Prepare the dataset
-    train_lab_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
-        transform=train_preprocess,
+    train_lab_ds = FRDCDatasetPreset.chestnut_20201218(
+        transform=train_preprocess
     )
 
     # TODO: This is a hacky impl of the unlabelled dataset, see the docstring
@@ -60,13 +57,7 @@ def main(
         transform=train_unl_preprocess(2),
     )
 
-    # Subset(train_ds, np.argwhere(train_ds.targets == 0).reshape(-1))
-    val_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20210510",
-        "90deg43m85pct255deg",
-        transform=preprocess,
-    )
+    val_ds = FRDCDatasetPreset.chestnut_20210510_43m(transform=preprocess)
 
     oe = OrdinalEncoder(
         handle_unknown="use_encoded_value",
