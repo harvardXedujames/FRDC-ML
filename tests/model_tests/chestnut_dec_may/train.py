@@ -47,12 +47,7 @@ def main(
         transform=train_preprocess
     )
 
-    # TODO: This is a hacky impl of the unlabelled dataset, see the docstring
-    #       for future work.
-    train_unl_ds = FRDCUnlabelledDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
+    train_unl_ds = FRDCDatasetPreset.chestnut_20201218.unlabelled(
         transform=train_unl_preprocess(2),
     )
 
