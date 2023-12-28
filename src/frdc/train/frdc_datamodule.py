@@ -36,7 +36,7 @@ class FRDCDataModule(LightningDataModule):
 
         Does not have the same performance as::
 
-            FRDCSSLDataModule(
+            FRDCDataModule(
                 train_lab_ds=train_lab_ds,
                 train_unl_ds=None,
                 ...
