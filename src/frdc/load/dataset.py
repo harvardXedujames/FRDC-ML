@@ -4,7 +4,7 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Callable, Any
+from typing import Iterable, Callable, Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -39,6 +39,10 @@ class FRDCDataset(Dataset):
         use_legacy_bounds: bool = False,
     ):
         """Initializes the FRDC Dataset.
+
+        Notes:
+            We recommend to check FRDCDatasetPreset if you want to use a
+            pre-defined dataset.
 
         Args:
             site: The site of the dataset, e.g. "chestnut_nature_park".
@@ -81,35 +85,6 @@ class FRDCDataset(Dataset):
             self.target_transform(self.targets[idx])
             if self.target_transform
             else self.targets[idx],
-        )
-
-    @staticmethod
-    def _load_debug_dataset(resize: int = 299) -> FRDCDataset:
-        """Loads a debug dataset from Google Cloud Storage.
-
-        Returns:
-            A dictionary of the dataset, with keys as the filenames and values
-            as the images.
-        """
-        from torchvision.transforms.v2 import (
-            Compose,
-            ToImage,
-            ToDtype,
-            Resize,
-        )
-
-        return FRDCDataset(
-            site="DEBUG",
-            date="0",
-            version=None,
-            transform=Compose(
-                [
-                    ToImage(),
-                    ToDtype(torch.float32),
-                    Resize((resize, resize)),
-                ]
-            ),
-            target_transform=None,
         )
 
     @property
@@ -245,6 +220,68 @@ class FRDCDataset(Dataset):
         im = Image.open(Path(path).as_posix())
         ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
+
+
+class FRDCDatasetPartial(Protocol):
+    """This class is used to provide type hints for FRDCDatasetPreset."""
+
+    def __call__(
+        self,
+        transform: Callable[[list[np.ndarray]], Any] = None,
+        target_transform: Callable[[list[str]], list[str]] = None,
+        use_legacy_bounds: bool = False,
+    ):
+        ...
+
+
+# This curries the FRDCDataset class, so that we can shorthand the preset
+# definitions.
+def dataset(site: str, date: str, version: str | None) -> FRDCDatasetPartial:
+    def inner(
+        transform: Callable[[list[np.ndarray]], Any] = None,
+        target_transform: Callable[[list[str]], list[str]] = None,
+        use_legacy_bounds: bool = False,
+    ):
+        return FRDCDataset(
+            site, date, version, transform, target_transform, use_legacy_bounds
+        )
+
+    return inner
+
+
+from torchvision.transforms.v2 import (
+    Compose,
+    ToImage,
+    ToDtype,
+    Resize,
+)
+
+
+@dataclass
+class FRDCDatasetPreset:
+    chestnut_20201218 = dataset("chestnut_nature_park", "20201218", None)
+    chestnut_20210510_43m = dataset(
+        "chestnut_nature_park", "20210510", "90deg43m85pct255deg"
+    )
+    chestnut_20210510_60m = dataset(
+        "chestnut_nature_park", "20210510", "90deg60m84.5pct255deg"
+    )
+    casuarina_20220418_183deg = dataset(
+        "casuarina_nature_park", "20220418", "183deg"
+    )
+    casuarina_20220418_93deg = dataset(
+        "casuarina_nature_park", "20220418", "93deg"
+    )
+    DEBUG = lambda resize=299: dataset(site="DEBUG", date="0", version=None)(
+        transform=Compose(
+            [
+                ToImage(),
+                ToDtype(torch.float32),
+                Resize((resize, resize)),
+            ]
+        ),
+        target_transform=None,
+    )
 
 
 # TODO: Kind of hacky, the unlabelled dataset should somehow come from the
