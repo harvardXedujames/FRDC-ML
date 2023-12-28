@@ -80,11 +80,6 @@ class FRDCDataset(Dataset):
         self.targets = None
 
         if use_legacy_bounds or (LABEL_STUDIO_CLIENT is None):
-            logger.warning(
-                "Using legacy bounds.csv file for dataset."
-                "This is pending to be deprecated in favour of pulling "
-                "annotations from Label Studio."
-            )
             bounds, self.targets = self.get_bounds_and_labels()
             self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
         else:
@@ -211,6 +206,11 @@ class FRDCDataset(Dataset):
             A tuple of (bounds, labels), where bounds is a list of
             (x0, y0, x1, y1) and labels is a list of labels.
         """
+        logger.warning(
+            "Using legacy bounds.csv file for dataset."
+            "This is pending to be deprecated in favour of pulling "
+            "annotations from Label Studio."
+        )
         fp = download(fp=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
         return (
