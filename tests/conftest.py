@@ -2,11 +2,12 @@ import numpy as np
 import pytest
 
 from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDatasetPreset
 
 
 @pytest.fixture(scope="session")
 def ds() -> FRDCDataset:
-    return FRDCDataset._load_debug_dataset()
+    return FRDCDatasetPreset.DEBUG()
 
 
 @pytest.fixture(scope="session")
