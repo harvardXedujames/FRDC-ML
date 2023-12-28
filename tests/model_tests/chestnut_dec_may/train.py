@@ -5,11 +5,9 @@ the 20210510 dataset.
 """
 
 # Uncomment this to run the W&B monitoring locally
-import os
-
-from frdc.utils.training import predict, plot_confusion_matrix
-
-os.environ["WANDB_MODE"] = "offline"
+# import os
+# from frdc.utils.training import predict, plot_confusion_matrix
+# os.environ["WANDB_MODE"] = "offline"
 
 from pathlib import Path
 
