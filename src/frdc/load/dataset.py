@@ -4,7 +4,7 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Callable, Any, Protocol
+from typing import Iterable, Callable, Any
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,32 @@ from frdc.utils import Rect
 logger = logging.getLogger(__name__)
 
 
-# This is not yet used much as we don't have sufficient training data.
 class FRDCConcatDataset(ConcatDataset):
+    """ConcatDataset for FRDCDataset.
+
+    Notes:
+        This handles concatenating the targets when you add two datasets
+        together, furthermore, implements the addition operator to
+        simplify the syntax.
+
+    Examples:
+        If you have two datasets, ds1 and ds2, you can concatenate them::
+
+            ds = ds1 + ds2
+
+        `ds` will be a FRDCConcatDataset, which is a subclass of ConcatDataset.
+
+        You can further add to a concatenated dataset::
+
+            ds = ds1 + ds2
+            ds = ds + ds3
+
+        Finallu, all concatenated datasets have the `targets` property, which
+        is a list of all the targets in the datasets::
+
+            (ds1 + ds2).targets == ds1.targets + ds2.targets
+    """
+
     def __init__(self, datasets: list[FRDCDataset]):
         super().__init__(datasets)
         self.datasets: list[FRDCDataset] = datasets
@@ -64,6 +88,13 @@ class FRDCDataset(Dataset):
             We recommend to check FRDCDatasetPreset if you want to use a
             pre-defined dataset.
 
+            You can concatenate datasets using the addition operator, e.g.::
+
+                ds = FRDCDataset(...) + FRDCDataset(...)
+
+            This will return a FRDCConcatDataset, see FRDCConcatDataset for
+            more information.
+
         Args:
             site: The site of the dataset, e.g. "chestnut_nature_park".
             date: The date of the dataset, e.g. "20201218".
@@ -71,6 +102,9 @@ class FRDCDataset(Dataset):
             transform: The transform to apply to each segment.
             target_transform: The transform to apply to each label.
             use_legacy_bounds: Whether to use the legacy bounds.csv file.
+                This will automatically be set to True if LABEL_STUDIO_CLIENT
+                is None, which happens when Label Studio cannot be connected
+                to.
         """
         self.site = site
         self.date = date
@@ -105,6 +139,7 @@ class FRDCDataset(Dataset):
 
     @property
     def dataset_dir(self):
+        """Returns the path format of the dataset."""
         return Path(
             f"{self.site}/{self.date}/"
             f"{self.version + '/' if self.version else ''}"
@@ -219,6 +254,7 @@ class FRDCDataset(Dataset):
         )
 
     def get_polybounds_and_labels(self):
+        """Gets the bounds and labels from Label Studio."""
         return get_task(
             Path(f"{self.dataset_dir}/result.jpg")
         ).get_bounds_and_labels()
@@ -246,8 +282,32 @@ class FRDCDataset(Dataset):
         return FRDCConcatDataset([self, other])
 
 
-class FRDCDatasetPartial(Protocol):
-    """This class is used to provide type hints for FRDCDatasetPreset."""
+# This curries the FRDCDataset class, so that we can shorthand the preset
+# definitions.
+@dataclass
+class FRDCDatasetPartial:
+    """Partial class for FRDCDataset.
+
+    Notes:
+        This is used internally by FRDCDatasetPreset to define the presets
+        in a more concise manner::
+
+            # Instead of
+            lambda *args, **kwargs:
+                FRDCDataset("chestnut_nature_park", "20201218", None,
+                            *args, **kwargs)
+
+            # Using partial, we can do this instead
+            FRDCDatasetPartial("chestnut_nature_park", "20201218", None)(
+                *args, **kwargs
+            )
+
+        See FRDCDatasetPreset for usage.
+    """
+
+    site: str
+    date: str
+    version: str | None
 
     def __call__(
         self,
@@ -255,40 +315,127 @@ class FRDCDatasetPartial(Protocol):
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
     ):
-        ...
+        """Alias for labelled()."""
+        return self.labelled(
+            transform,
+            target_transform,
+            use_legacy_bounds,
+        )
 
-
-# This curries the FRDCDataset class, so that we can shorthand the preset
-# definitions.
-def dataset(site: str, date: str, version: str | None) -> FRDCDatasetPartial:
-    def inner(
+    def labelled(
+        self,
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
     ):
+        """Returns the Labelled Dataset."""
         return FRDCDataset(
-            site, date, version, transform, target_transform, use_legacy_bounds
+            self.site,
+            self.date,
+            self.version,
+            transform,
+            target_transform,
+            use_legacy_bounds,
         )
 
-    return inner
+    def unlabelled(
+        self,
+        transform: Callable[[list[np.ndarray]], Any] = None,
+        target_transform: Callable[[list[str]], list[str]] = None,
+        use_legacy_bounds: bool = False,
+    ):
+        """Returns the Unlabelled Dataset.
+
+        Notes:
+            This simply masks away the labels during __getitem__.
+            The same behaviour can be achieved by setting __class__ to
+            FRDCUnlabelledDataset, but this is a more convenient way to do so.
+        """
+        return FRDCUnlabelledDataset(
+            self.site,
+            self.date,
+            self.version,
+            transform,
+            target_transform,
+            use_legacy_bounds,
+        )
+
+
+class FRDCUnlabelledDataset(FRDCDataset):
+    """An implementation of FRDCDataset that masks away the labels.
+
+    Notes:
+        If you already have a FRDCDataset, you can simply set __class__ to
+        FRDCUnlabelledDataset to achieve the same behaviour::
+
+            ds.__class__ = FRDCUnlabelledDataset
+
+        This will replace the __getitem__ method with the one below.
+
+        However, it's also perfectly fine to initialize this directly::
+
+            ds_unl = FRDCUnlabelledDataset(...)
+    """
+
+    def __getitem__(self, item):
+        return (
+            self.transform(self.ar_segments[item])
+            if self.transform
+            else self.ar_segments[item]
+        )
 
 
 @dataclass
 class FRDCDatasetPreset:
-    chestnut_20201218 = dataset("chestnut_nature_park", "20201218", None)
-    chestnut_20210510_43m = dataset(
+    """Presets for the FRDCDataset.
+
+    Examples:
+        Each variable is a preset for the FRDCDataset.
+
+        You can use it like this::
+
+            FRDCDatasetPreset.chestnut_20201218()
+
+        Which returns a FRDCDataset.
+
+        Furthermore, if you're interested in the unlabelled dataset, you can
+        use::
+
+            FRDCDatasetPreset.chestnut_20201218.unlabelled()
+
+        Which returns a FRDCUnlabelledDataset.
+
+        If you'd like to keep the syntax consistent for labelled and unlabelled
+        datasets, you can use::
+
+            FRDCDatasetPreset.chestnut_20201218.labelled()
+            FRDCDatasetPreset.chestnut_20201218.unlabelled()
+
+        The `labelled` method is simply an alias for the `__call__` method.
+
+        The DEBUG dataset is a special dataset that is used for debugging,
+        which pulls from GCS a small cropped image and dummy label + bounds.
+
+    """
+
+    chestnut_20201218 = FRDCDatasetPartial(
+        "chestnut_nature_park", "20201218", None
+    )
+    chestnut_20210510_43m = FRDCDatasetPartial(
         "chestnut_nature_park", "20210510", "90deg43m85pct255deg"
     )
-    chestnut_20210510_60m = dataset(
+    chestnut_20210510_60m = FRDCDatasetPartial(
         "chestnut_nature_park", "20210510", "90deg60m84.5pct255deg"
     )
-    casuarina_20220418_183deg = dataset(
+    casuarina_20220418_183deg = FRDCDatasetPartial(
         "casuarina_nature_park", "20220418", "183deg"
     )
-    casuarina_20220418_93deg = dataset(
+    casuarina_20220418_93deg = FRDCDatasetPartial(
         "casuarina_nature_park", "20220418", "93deg"
     )
-    DEBUG = lambda resize=299: dataset(site="DEBUG", date="0", version=None)(
+    DEBUG = lambda resize=299: FRDCDatasetPartial(
+        site="DEBUG", date="0", version=None
+    )(
         transform=Compose(
             [
                 ToImage(),
@@ -298,19 +445,3 @@ class FRDCDatasetPreset:
         ),
         target_transform=None,
     )
-
-
-# TODO: Kind of hacky, the unlabelled dataset should somehow come from the
-#       labelled dataset by filtering out the unknown labels. But we'll
-#       figure out this later when we do get unlabelled data.
-#       I'm thinking some API that's like
-#       FRDCDataset.filter_labels(...) -> FRDCSubset, FRDCSubset
-#       It could be more intuitive if it returns FRDCDataset, so we don't have
-#       to implement another class.
-class FRDCUnlabelledDataset(FRDCDataset):
-    def __getitem__(self, item):
-        return (
-            self.transform(self.ar_segments[item])
-            if self.transform
-            else self.ar_segments[item]
-        )
