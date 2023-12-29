@@ -241,72 +241,61 @@ class MixMatchModule(LightningModule):
         We leverage this to do some preprocessing on the data.
         Namely, we use the StandardScaler and OrdinalEncoder to transform the
         data.
+
+        Notes:
+            PyTorch Lightning may complain about this being on the Module
+            instead of the DataModule. However, this is intentional as we
+            want to export the model alongside the transformations.
         """
 
-        # TODO: ngl, this is pretty chunky.
-        #       It works, but it's not very pretty.
-        if self.training:
-            (x_lab, y), x_unl = batch
-            xs = [x_lab, *x_unl]
-
-            b, c, h, w = x_lab.shape
-
-            # Move Channel to the last dimension then transform
-            xs_ss: list[np.ndarray] = [
-                self.x_scaler.transform(x.permute(0, 2, 3, 1).reshape(-1, c))
-                for x in xs
-            ]
-
-            # Move Channel back to the second dimension
-            xs_: list[torch.Tensor] = [
-                torch.from_numpy(x_ss.reshape(b, h, w, c))
-                .permute(0, 3, 1, 2)
-                .float()
-                for x_ss in xs_ss
-            ]
-
-            y: tuple[str]
-            y_: torch.Tensor = torch.from_numpy(
-                self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
-            )
-
-            # Ordinal Encoders can return a np.nan if the value is not in the
-            # categories. We will remove that from the batch.
-            x_ = xs_[0][~torch.isnan(y_)]
-            y_ = y_[~torch.isnan(y_)]
-
-            return (x_, y_.long()), xs_[1:]
-
-        else:
-            x, y = batch
-
-            x: torch.Tensor
-            b, c, h, w = x.shape
-
+        def x_trans_fn(x):
             # Standard Scaler only accepts (n_samples, n_features),
             # so we need to do some fancy reshaping.
             # Note that moving dimensions then reshaping is different from just
             # reshaping!
+
             # Move Channel to the last dimension then transform
-            x_ss: np.ndarray = self.x_scaler.transform(
+            # B x C x H x W -> B x H x W x C
+            b, c, h, w = x.shape
+            x_ss = self.x_scaler.transform(
                 x.permute(0, 2, 3, 1).reshape(-1, c)
             )
 
             # Move Channel back to the second dimension
-            x_: torch.Tensor = (
+            # B x H x W x C -> B x C x H x W
+            return (
                 torch.from_numpy(x_ss.reshape(b, h, w, c))
                 .permute(0, 3, 1, 2)
                 .float()
             )
 
-            y: tuple[str]
-            y_: torch.Tensor = torch.from_numpy(
+        def y_trans_fn(y):
+            return torch.from_numpy(
                 self.y_encoder.transform(np.array(y).reshape(-1, 1)).squeeze()
             )
 
-            # Ordinal Encoders can return a np.nan if the value is not in the
-            # categories. We will remove that from the batch.
-            x_ = x_[~torch.isnan(y_)]
-            y_ = y_[~torch.isnan(y_)]
+        # We need to handle the train and val dataloaders differently.
+        # For training, the unlabelled data is returned while for validation,
+        # the unlabelled data is just omitted.
+        if self.training:
+            (x_lab, y), x_unl = batch
+        else:
+            x_lab, y = batch
+            x_unl = []
 
-            return x_, y_.long()
+        x_lab_trans = x_trans_fn(x_lab)
+        y_trans = y_trans_fn(y)
+        x_unl_trans = [x_trans_fn(x) for x in x_unl]
+
+        # Remove nan values from the batch
+        #   Ordinal Encoders can return a np.nan if the value is not in the
+        #   categories. We will remove that from the batch.
+        nan = ~torch.isnan(y_trans)
+        x_lab_trans = x_lab_trans[nan]
+        x_unl_trans = [x[nan] for x in x_unl_trans]
+        y_trans = y_trans[nan]
+
+        if self.training:
+            return (x_lab_trans, y_trans.long()), x_unl_trans
+        else:
+            return x_lab_trans, y_trans.long()

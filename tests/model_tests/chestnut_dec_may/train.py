@@ -6,6 +6,7 @@ the 20210510 dataset.
 
 # Uncomment this to run the W&B monitoring locally
 # import os
+# from frdc.utils.training import predict, plot_confusion_matrix
 # os.environ["WANDB_MODE"] = "offline"
 
 from pathlib import Path
@@ -21,15 +22,13 @@ from lightning.pytorch.callbacks import (
 from lightning.pytorch.loggers import WandbLogger
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
-from frdc.load import FRDCDataset
-from frdc.load.dataset import FRDCUnlabelledDataset
+from frdc.load.preset import FRDCDatasetPreset as ds
 from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 from frdc.train.frdc_datamodule import FRDCDataModule
 from model_tests.utils import (
     train_preprocess,
     train_unl_preprocess,
     preprocess,
-    evaluate,
     FRDCDatasetFlipped,
 )
 
@@ -44,29 +43,13 @@ def main(
     run = wandb.init()
     logger = WandbLogger(name="chestnut_dec_may", project="frdc")
     # Prepare the dataset
-    train_lab_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
-        transform=train_preprocess,
+    train_lab_ds = ds.chestnut_20201218(transform=train_preprocess)
+
+    train_unl_ds = ds.chestnut_20201218.unlabelled(
+        transform=train_unl_preprocess(2)
     )
 
-    # TODO: This is a hacky impl of the unlabelled dataset, see the docstring
-    #       for future work.
-    train_unl_ds = FRDCUnlabelledDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
-        transform=train_unl_preprocess(2),
-    )
-
-    # Subset(train_ds, np.argwhere(train_ds.targets == 0).reshape(-1))
-    val_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20210510",
-        "90deg43m85pct255deg",
-        transform=preprocess,
-    )
+    val_ds = ds.chestnut_20210510_43m(transform=preprocess)
 
     oe = OrdinalEncoder(
         handle_unknown="use_encoded_value",
@@ -121,15 +104,20 @@ def main(
             f"- Results: [WandB Report]({run.get_url()})"
         )
 
-    fig, acc = evaluate(
+    y_true, y_pred = predict(
         ds=FRDCDatasetFlipped(
             "chestnut_nature_park",
             "20210510",
             "90deg43m85pct255deg",
             transform=preprocess,
         ),
+        model_cls=InceptionV3MixMatchModule,
         ckpt_pth=Path(ckpt.best_model_path),
     )
+    fig, ax = plot_confusion_matrix(y_true, y_pred, oe.categories_[0])
+    acc = np.sum(y_true == y_pred) / len(y_true)
+    ax.set_title(f"Accuracy: {acc:.2%}")
+
     wandb.log({"confusion_matrix": wandb.Image(fig)})
     wandb.log({"eval_accuracy": acc})
 
