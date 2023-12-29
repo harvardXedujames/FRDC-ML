@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from types import MethodType
-from typing import Any
 
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, RandomSampler
 
-from frdc.load import FRDCDataset
-from frdc.load.dataset import FRDCUnlabelledDataset
+from frdc.load.dataset import FRDCDataset, FRDCUnlabelledDataset
 
 
 @dataclass

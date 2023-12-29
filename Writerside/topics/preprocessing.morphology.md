@@ -29,7 +29,7 @@ classification</b>
 Perform auto-segmentation on a dataset to yield a label classification.
 
 ```python
-from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDataset
 from frdc.preprocess.morphology import (
     threshold_binary_mask, binary_watershed
 )

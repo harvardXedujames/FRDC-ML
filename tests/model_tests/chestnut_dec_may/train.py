@@ -22,7 +22,7 @@ from lightning.pytorch.callbacks import (
 from lightning.pytorch.loggers import WandbLogger
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
-from frdc.load.dataset import FRDCDatasetPreset as ds
+from frdc.load.preset import FRDCDatasetPreset as ds
 from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 from frdc.train.frdc_datamodule import FRDCDataModule
 from model_tests.utils import (

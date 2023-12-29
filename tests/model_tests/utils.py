@@ -14,7 +14,7 @@ from torchvision.transforms.v2 import (
 )
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
-from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDataset
 from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 
 THIS_DIR = Path(__file__).parent

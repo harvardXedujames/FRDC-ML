@@ -35,7 +35,7 @@ Take a look at <code>frdc.conf.BAND_MAX_CONFIG</code> for an example.
 ## Usage
 
 ```python
-from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDataset
 from frdc.preprocess.scale import (
     scale_0_1_per_band, scale_normal_per_band, scale_static_per_band
 )

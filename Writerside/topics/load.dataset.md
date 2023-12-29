@@ -17,7 +17,7 @@ version.
 For example, to load our Chestnut Nature Park dataset. 
 
 ```python
-from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDataset
 
 ds = FRDCDataset(site='chestnut_nature_park',
                  date='20201218',

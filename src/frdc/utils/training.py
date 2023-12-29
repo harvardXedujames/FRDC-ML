@@ -8,7 +8,7 @@ from seaborn import heatmap
 from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader
 
-from frdc.load import FRDCDataset
+from frdc.load.dataset import FRDCDataset
 
 
 def get_latest_ckpt_path(search_dir: Path, extention: str = "ckpt"):

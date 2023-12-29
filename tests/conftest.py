@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from frdc.load import FRDCDataset
-from frdc.load.dataset import FRDCDatasetPreset
+from frdc.load.dataset import FRDCDataset
+from frdc.load.preset import FRDCDatasetPreset
 
 
 @pytest.fixture(scope="session")
