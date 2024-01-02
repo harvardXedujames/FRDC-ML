@@ -25,6 +25,7 @@ from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 from frdc.load.preset import FRDCDatasetPreset as ds
 from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 from frdc.train.frdc_datamodule import FRDCDataModule
+from frdc.utils.training import predict, plot_confusion_matrix
 from model_tests.utils import (
     train_preprocess,
     train_unl_preprocess,
