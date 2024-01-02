@@ -43,13 +43,12 @@ def main(
 ):
     run = wandb.init()
     logger = WandbLogger(name="chestnut_dec_may", project="frdc")
+
     # Prepare the dataset
     train_lab_ds = ds.chestnut_20201218(transform=train_preprocess)
-
     train_unl_ds = ds.chestnut_20201218.unlabelled(
         transform=train_unl_preprocess(2)
     )
-
     val_ds = ds.chestnut_20210510_43m(transform=preprocess)
 
     oe = OrdinalEncoder(
@@ -65,12 +64,12 @@ def main(
     # Prepare the datamodule and trainer
     dm = FRDCDataModule(
         train_lab_ds=train_lab_ds,
-        # Pass in None to use the default supervised DM
-        train_unl_ds=train_unl_ds,
+        train_unl_ds=train_unl_ds,  # None to use supervised DM
         val_ds=val_ds,
         batch_size=batch_size,
         train_iters=train_iters,
         val_iters=val_iters,
+        sampling_strategy="stratified",
     )
 
     trainer = pl.Trainer(
@@ -90,12 +89,14 @@ def main(
         ],
         logger=logger,
     )
+
     m = InceptionV3MixMatchModule(
         n_classes=n_classes,
         lr=lr,
         x_scaler=ss,
         y_encoder=oe,
     )
+    logger.watch(m)
 
     trainer.fit(m, datamodule=dm)
 
