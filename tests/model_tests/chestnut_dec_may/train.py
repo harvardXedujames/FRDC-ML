@@ -96,6 +96,7 @@ def main(
         x_scaler=ss,
         y_encoder=oe,
     )
+    logger.watch(m)
 
     trainer.fit(m, datamodule=dm)
 
