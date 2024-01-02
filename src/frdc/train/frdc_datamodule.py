@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, RandomSampler
+from torch.utils.data import DataLoader, RandomSampler, Sampler
 
 from frdc.load.dataset import FRDCDataset, FRDCUnlabelledDataset
+from frdc.train.stratified_sampling import RandomStratifiedSampler
 
 
 @dataclass
@@ -61,6 +63,7 @@ class FRDCDataModule(LightningDataModule):
     batch_size: int = 4
     train_iters: int = 100
     val_iters: int = 100
+    sampling_strategy: Literal["stratified", "random"] = "stratified"
 
     def __post_init__(self):
         super().__init__()
@@ -70,24 +73,29 @@ class FRDCDataModule(LightningDataModule):
 
     def train_dataloader(self):
         num_samples = self.batch_size * self.train_iters
+        if self.sampling_strategy == "stratified":
+            sampler = lambda ds: RandomStratifiedSampler(
+                ds.targets, num_samples=num_samples, replacement=True
+            )
+        elif self.sampling_strategy == "random":
+            sampler = lambda ds: RandomSampler(
+                ds, num_samples=num_samples, replacement=True
+            )
+        else:
+            raise ValueError(
+                f"Invalid sampling strategy: {self.sampling_strategy}"
+            )
+
         lab_dl = DataLoader(
             self.train_lab_ds,
             batch_size=self.batch_size,
-            sampler=RandomSampler(
-                self.train_lab_ds,
-                num_samples=num_samples,
-                replacement=False,
-            ),
+            sampler=sampler(self.train_lab_ds),
         )
         unl_dl = (
             DataLoader(
                 self.train_unl_ds,
                 batch_size=self.batch_size,
-                sampler=RandomSampler(
-                    self.train_unl_ds,
-                    num_samples=self.batch_size * self.train_iters,
-                    replacement=False,
-                ),
+                sampler=sampler(self.train_unl_ds),
             )
             if self.train_unl_ds is not None
             # This is a hacky way to create an empty dataloader.
@@ -99,7 +107,6 @@ class FRDCDataModule(LightningDataModule):
                 sampler=RandomSampler(
                     empty,
                     num_samples=num_samples,
-                    replacement=False,
                 ),
             )
         )
