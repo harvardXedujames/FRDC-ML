@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Iterator, Any, Sequence
 
+import pandas as pd
 import torch
+from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Sampler
 
 
 class RandomStratifiedSampler(Sampler[int]):
     def __init__(
         self,
-        targets: torch.Tensor,
+        targets: Sequence[Any],
         num_samples: int | None = None,
+        replacement: bool = True,
     ) -> None:
         """Stratified sampling from a dataset, such that each class is
         sampled with equal probability.
@@ -42,11 +45,13 @@ class RandomStratifiedSampler(Sampler[int]):
         # 1 / bincount = [0.5, 1]
         # 1 / bincount / len(bincount) = [0.25, 0.5]
         # The indexing then just projects it to the original targets.
+        targets_lab = torch.tensor(LabelEncoder().fit_transform(targets))
         self.target_probs: torch.Tensor = (
-            1 / (bincount := torch.bincount(targets)) / len(bincount)
-        )[targets]
+            1 / (bincount := torch.bincount(targets_lab)) / len(bincount)
+        )[targets_lab]
 
         self.num_samples = num_samples if num_samples else len(targets)
+        self.replacement = replacement
 
     def __len__(self) -> int:
         return self.num_samples
@@ -56,5 +61,5 @@ class RandomStratifiedSampler(Sampler[int]):
         yield from torch.multinomial(
             self.target_probs,
             num_samples=self.num_samples,
-            replacement=True,
+            replacement=self.replacement,
         )
