@@ -7,7 +7,7 @@ from frdc.train.stratified_sampling import RandomStratifiedSampler
 
 
 def test_stratifed_sampling_has_correct_probs():
-    sampler = RandomStratifiedSampler(torch.tensor([0, 0, 1]))
+    sampler = RandomStratifiedSampler(["A", "A", "B"])
 
     assert torch.all(sampler.target_probs == torch.tensor([0.25, 0.25, 0.5]))
 
@@ -18,7 +18,7 @@ def test_stratified_sampling_fairly_samples():
     # This is a simple example of a dataset with 2 classes.
     # The first 2 samples are class 0, the third is class 1.
     x = torch.tensor([0, 1, 2])
-    y = torch.tensor([0, 0, 1])
+    y = ["A", "A", "B"]
 
     # To check that it's truly stratified, we'll sample 1000 times
     # then assert that both classes are sampled roughly equally.
