@@ -77,3 +77,15 @@ except requests.exceptions.ConnectionError:
         f"LABEL_STUDIO_CLIENT will be None."
     )
     LABEL_STUDIO_CLIENT = None
+
+try:
+    logger.info("Attempting to Get Label Studio Project...")
+    LABEL_STUDIO_CLIENT.get_project(1)
+except requests.exceptions.HTTPError:
+    logger.warning(
+        f"Could not get main annotation project. "
+        f"Pulling annotations may not work. "
+        f"It's possible that your API Key is incorrect, "
+        f"or somehow your .netrc is preventing you from "
+        f"accessing the project. "
+    )
