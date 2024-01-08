@@ -154,7 +154,11 @@ class MixMatchModule(LightningModule):
     def training_step(self, batch, batch_idx):
         (x_lbl, y_lbl), x_unls = batch
         self.lbl_logger(
-            self.logger.experiment, "Input Y Label", y_lbl, flush_every=10
+            self.logger.experiment,
+            "Input Y Label",
+            y_lbl,
+            flush_every=10,
+            num_bins=self.n_classes,
         )
 
         y_lbl_ohe = one_hot(y_lbl.long(), num_classes=self.n_classes)
@@ -186,6 +190,7 @@ class MixMatchModule(LightningModule):
                 "Labelled Y Pred",
                 torch.argmax(y_mix_lbl_pred, dim=1),
                 flush_every=10,
+                num_bins=self.n_classes,
             )
             loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
             self.lbl_logger(
@@ -193,6 +198,7 @@ class MixMatchModule(LightningModule):
                 "Unlabelled Y Pred",
                 torch.argmax(y_mix_unl_pred, dim=1),
                 flush_every=10,
+                num_bins=self.n_classes,
             )
             loss_unl_scale = self.loss_unl_scaler(progress=self.progress)
 
@@ -218,7 +224,11 @@ class MixMatchModule(LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         self.lbl_logger(
-            self.logger.experiment, "Val Input Y Label", y, flush_every=1
+            self.logger.experiment,
+            "Val Input Y Label",
+            y,
+            flush_every=1,
+            num_bins=self.n_classes,
         )
         y_pred = self.ema_model(x)
         self.lbl_logger(
@@ -226,6 +236,7 @@ class MixMatchModule(LightningModule):
             "Val Pred Y Label",
             torch.argmax(y_pred, dim=1),
             flush_every=1,
+            num_bins=self.n_classes,
         )
         loss = F.cross_entropy(y_pred, y.long())
 
@@ -334,6 +345,7 @@ class WandBLabelLogger(dict):
         logger: wandb.sdk.wandb_run.Run,
         key: str,
         value: torch.Tensor,
+        num_bins: int,
         flush_every: int = 10,
     ):
         """Log the labels to WandB
@@ -354,7 +366,8 @@ class WandBLabelLogger(dict):
             logger.log(
                 {
                     key: wandb.Histogram(
-                        torch.flatten(value).detach().cpu().tolist()
+                        torch.flatten(value).detach().cpu().tolist(),
+                        num_bins=num_bins,
                     )
                 }
             )
