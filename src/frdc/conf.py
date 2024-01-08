@@ -88,5 +88,3 @@ except requests.exceptions.ConnectionError:
         f"LABEL_STUDIO_CLIENT will be None."
     )
     LABEL_STUDIO_CLIENT = None
-
-
