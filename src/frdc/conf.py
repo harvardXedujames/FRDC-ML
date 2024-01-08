@@ -71,6 +71,17 @@ try:
         api_key=LABEL_STUDIO_API_KEY,
     )
     logger.info("Connected to Label Studio.")
+    try:
+        logger.info("Attempting to Get Label Studio Project...")
+        LABEL_STUDIO_CLIENT.get_project(1)
+    except requests.exceptions.HTTPError:
+        logger.warning(
+            f"Could not get main annotation project. "
+            f"Pulling annotations may not work. "
+            f"It's possible that your API Key is incorrect, "
+            f"or somehow your .netrc is preventing you from "
+            f"accessing the project. "
+        )
 except requests.exceptions.ConnectionError:
     logger.warning(
         f"Could not connect to Label Studio at {LABEL_STUDIO_URL}. "
@@ -78,14 +89,4 @@ except requests.exceptions.ConnectionError:
     )
     LABEL_STUDIO_CLIENT = None
 
-try:
-    logger.info("Attempting to Get Label Studio Project...")
-    LABEL_STUDIO_CLIENT.get_project(1)
-except requests.exceptions.HTTPError:
-    logger.warning(
-        f"Could not get main annotation project. "
-        f"Pulling annotations may not work. "
-        f"It's possible that your API Key is incorrect, "
-        f"or somehow your .netrc is preventing you from "
-        f"accessing the project. "
-    )
+
