@@ -4,12 +4,6 @@ This test is done by training a model on the 20201218 dataset, then testing on
 the 20210510 dataset.
 """
 import os
-
-# Uncomment this to run the W&B monitoring locally
-# import os
-# from frdc.utils.training import predict, plot_confusion_matrix
-# os.environ["WANDB_MODE"] = "offline"
-
 from pathlib import Path
 
 import lightning as pl
@@ -33,6 +27,12 @@ from model_tests.utils import (
     preprocess,
     FRDCDatasetFlipped,
 )
+
+
+# Uncomment this to run the W&B monitoring locally
+# import os
+# from frdc.utils.training import predict, plot_confusion_matrix
+# os.environ["WANDB_MODE"] = "offline"
 
 
 def main(
@@ -91,6 +91,7 @@ def main(
     )
 
     m = InceptionV3MixMatchModule(
+        in_channels=train_lab_ds.ar.shape[-1],
         n_classes=n_classes,
         lr=lr,
         x_scaler=ss,

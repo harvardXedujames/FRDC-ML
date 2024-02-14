@@ -18,6 +18,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
     def __init__(
         self,
         *,
+        in_channels: int,
         n_classes: int,
         lr: float,
         x_scaler: StandardScaler,
@@ -47,12 +48,20 @@ class InceptionV3MixMatchModule(MixMatchModule):
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
+            transform_input=False,
         )
         self.inception.fc = nn.Identity()
 
         # Freeze base model
         for param in self.inception.parameters():
             param.requires_grad = False
+
+        # Replace the first layer to accept 3 channels
+        # This will require grad, as it's a new layer
+        self.inception.Conv2d_1a_3x3 = nn.Sequential(
+            nn.Conv2d(in_channels, 32, bias=False, kernel_size=3, stride=2),
+            nn.BatchNorm2d(32, eps=0.001),
+        )
 
         self.fc = nn.Sequential(
             nn.BatchNorm1d(self.INCEPTION_OUT_DIMS),
@@ -61,11 +70,13 @@ class InceptionV3MixMatchModule(MixMatchModule):
             nn.Linear(self.INCEPTION_OUT_DIMS // 2, n_classes),
             nn.Softmax(dim=1),
         )
+
         # The problem is that the deep copy runs even before the module is
         # initialized, which means ema_model is empty.
         ema_model = deepcopy(self)
         for param in ema_model.parameters():
             param.detach_()
+
         self._ema_model = ema_model
         self.ema_updater = EMA(model=self, ema_model=self.ema_model)
         self.ema_lr = ema_lr
@@ -112,4 +123,5 @@ class InceptionV3MixMatchModule(MixMatchModule):
         return torch.optim.Adam(
             self.parameters(),
             lr=self.lr,
+            weight_decay=1e-5,
         )
