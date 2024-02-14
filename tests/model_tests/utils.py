@@ -15,6 +15,8 @@ from torchvision.transforms.v2 import (
     RandomVerticalFlip,
     RandomCrop,
     CenterCrop,
+    RandomRotation,
+    RandomApply,
 )
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
@@ -122,6 +124,7 @@ def train_preprocess(x):
             ),
             RandomHorizontalFlip(),
             RandomVerticalFlip(),
+            RandomApply([RandomRotation((90, 90))], p=0.5),
         ]
     )(x)
 
