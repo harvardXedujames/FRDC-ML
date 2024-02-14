@@ -50,12 +50,16 @@ class FRDCDatasetPartial:
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
+        polycrop: bool = False,
+        polycrop_value: Any = np.nan,
     ):
         """Alias for labelled()."""
         return self.labelled(
             transform,
             target_transform,
-            use_legacy_bounds,
+            use_legacy_bounds=use_legacy_bounds,
+            polycrop=polycrop,
+            polycrop_value=polycrop_value,
         )
 
     def labelled(
@@ -63,6 +67,8 @@ class FRDCDatasetPartial:
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
+        polycrop: bool = False,
+        polycrop_value: Any = np.nan,
     ):
         """Returns the Labelled Dataset."""
         return FRDCDataset(
@@ -71,7 +77,9 @@ class FRDCDatasetPartial:
             self.version,
             transform,
             target_transform,
-            use_legacy_bounds,
+            use_legacy_bounds=use_legacy_bounds,
+            polycrop=polycrop,
+            polycrop_value=polycrop_value,
         )
 
     def unlabelled(
@@ -79,6 +87,8 @@ class FRDCDatasetPartial:
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
+        polycrop: bool = False,
+        polycrop_value: Any = np.nan,
     ):
         """Returns the Unlabelled Dataset.
 
@@ -93,7 +103,9 @@ class FRDCDatasetPartial:
             self.version,
             transform,
             target_transform,
-            use_legacy_bounds,
+            use_legacy_bounds=use_legacy_bounds,
+            polycrop=polycrop,
+            polycrop_value=polycrop_value,
         )
 
 
