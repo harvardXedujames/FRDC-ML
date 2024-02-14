@@ -8,7 +8,6 @@ from typing import Iterable, Callable, Any
 
 import numpy as np
 import pandas as pd
-import torch
 from PIL import Image
 from torch.utils.data import Dataset, ConcatDataset
 
@@ -27,6 +26,44 @@ from frdc.utils import Rect
 logger = logging.getLogger(__name__)
 
 
+class FRDCConcatDataset(ConcatDataset):
+    """ConcatDataset for FRDCDataset.
+
+    Notes:
+        This handles concatenating the targets when you add two datasets
+        together, furthermore, implements the addition operator to
+        simplify the syntax.
+
+    Examples:
+        If you have two datasets, ds1 and ds2, you can concatenate them::
+
+            ds = ds1 + ds2
+
+        `ds` will be a FRDCConcatDataset, which is a subclass of ConcatDataset.
+
+        You can further add to a concatenated dataset::
+
+            ds = ds1 + ds2
+            ds = ds + ds3
+
+        Finallu, all concatenated datasets have the `targets` property, which
+        is a list of all the targets in the datasets::
+
+            (ds1 + ds2).targets == ds1.targets + ds2.targets
+    """
+
+    def __init__(self, datasets: list[FRDCDataset]):
+        super().__init__(datasets)
+        self.datasets: list[FRDCDataset] = datasets
+
+    @property
+    def targets(self):
+        return [t for ds in self.datasets for t in ds.targets]
+
+    def __add__(self, other: FRDCDataset) -> FRDCConcatDataset:
+        return FRDCConcatDataset([*self.datasets, other])
+
+
 @dataclass
 class FRDCDataset(Dataset):
     def __init__(
@@ -37,8 +74,21 @@ class FRDCDataset(Dataset):
         transform: Callable[[list[np.ndarray]], Any] = None,
         target_transform: Callable[[list[str]], list[str]] = None,
         use_legacy_bounds: bool = False,
+        polycrop: bool = False,
+        polycrop_value: Any = np.nan,
     ):
         """Initializes the FRDC Dataset.
+
+        Notes:
+            We recommend to check FRDCDatasetPreset if you want to use a
+            pre-defined dataset.
+
+            You can concatenate datasets using the addition operator, e.g.::
+
+                ds = FRDCDataset(...) + FRDCDataset(...)
+
+            This will return a FRDCConcatDataset, see FRDCConcatDataset for
+            more information.
 
         Args:
             site: The site of the dataset, e.g. "chestnut_nature_park".
@@ -47,25 +97,30 @@ class FRDCDataset(Dataset):
             transform: The transform to apply to each segment.
             target_transform: The transform to apply to each label.
             use_legacy_bounds: Whether to use the legacy bounds.csv file.
+                This will automatically be set to True if LABEL_STUDIO_CLIENT
+                is None, which happens when Label Studio cannot be connected
+                to.
+            polycrop: Whether to further crop the segments via its polygon
+                bounds. The cropped area will be padded with np.nan.
         """
         self.site = site
         self.date = date
         self.version = version
 
         self.ar, self.order = self.get_ar_bands()
+        self.targets = None
 
         if use_legacy_bounds or (LABEL_STUDIO_CLIENT is None):
-            logger.warning(
-                "Using legacy bounds.csv file for dataset."
-                "This is pending to be deprecated in favour of pulling "
-                "annotations from Label Studio."
-            )
             bounds, self.targets = self.get_bounds_and_labels()
             self.ar_segments = extract_segments_from_bounds(self.ar, bounds)
         else:
             bounds, self.targets = self.get_polybounds_and_labels()
             self.ar_segments = extract_segments_from_polybounds(
-                self.ar, bounds, cropped=True, polycropped=False
+                self.ar,
+                bounds,
+                cropped=True,
+                polycrop=polycrop,
+                polycrop_value=polycrop_value,
             )
         self.transform = transform
         self.target_transform = target_transform
@@ -83,37 +138,9 @@ class FRDCDataset(Dataset):
             else self.targets[idx],
         )
 
-    @staticmethod
-    def _load_debug_dataset(resize: int = 299) -> FRDCDataset:
-        """Loads a debug dataset from Google Cloud Storage.
-
-        Returns:
-            A dictionary of the dataset, with keys as the filenames and values
-            as the images.
-        """
-        from torchvision.transforms.v2 import (
-            Compose,
-            ToImage,
-            ToDtype,
-            Resize,
-        )
-
-        return FRDCDataset(
-            site="DEBUG",
-            date="0",
-            version=None,
-            transform=Compose(
-                [
-                    ToImage(),
-                    ToDtype(torch.float32),
-                    Resize((resize, resize)),
-                ]
-            ),
-            target_transform=None,
-        )
-
     @property
     def dataset_dir(self):
+        """Returns the path format of the dataset."""
         return Path(
             f"{self.site}/{self.date}/"
             f"{self.version + '/' if self.version else ''}"
@@ -215,6 +242,11 @@ class FRDCDataset(Dataset):
             A tuple of (bounds, labels), where bounds is a list of
             (x0, y0, x1, y1) and labels is a list of labels.
         """
+        logger.warning(
+            "Using legacy bounds.csv file for dataset."
+            "This is pending to be deprecated in favour of pulling "
+            "annotations from Label Studio."
+        )
         fp = download(fp=self.dataset_dir / file_name)
         df = pd.read_csv(fp)
         return (
@@ -223,6 +255,7 @@ class FRDCDataset(Dataset):
         )
 
     def get_polybounds_and_labels(self):
+        """Gets the bounds and labels from Label Studio."""
         return get_task(
             Path(f"{self.dataset_dir}/result.jpg")
         ).get_bounds_and_labels()
@@ -246,33 +279,29 @@ class FRDCDataset(Dataset):
         ar = np.asarray(im)
         return np.expand_dims(ar, axis=-1) if ar.ndim == 2 else ar
 
+    def __add__(self, other) -> FRDCConcatDataset:
+        return FRDCConcatDataset([self, other])
 
-# TODO: Kind of hacky, the unlabelled dataset should somehow come from the
-#       labelled dataset by filtering out the unknown labels. But we'll
-#       figure out this later when we do get unlabelled data.
-#       I'm thinking some API that's like
-#       FRDCDataset.filter_labels(...) -> FRDCSubset, FRDCSubset
-#       It could be more intuitive if it returns FRDCDataset, so we don't have
-#       to implement another class.
+
 class FRDCUnlabelledDataset(FRDCDataset):
+    """An implementation of FRDCDataset that masks away the labels.
+
+    Notes:
+        If you already have a FRDCDataset, you can simply set __class__ to
+        FRDCUnlabelledDataset to achieve the same behaviour::
+
+            ds.__class__ = FRDCUnlabelledDataset
+
+        This will replace the __getitem__ method with the one below.
+
+        However, it's also perfectly fine to initialize this directly::
+
+            ds_unl = FRDCUnlabelledDataset(...)
+    """
+
     def __getitem__(self, item):
         return (
             self.transform(self.ar_segments[item])
             if self.transform
             else self.ar_segments[item]
         )
-
-
-# This is not yet used much as we don't have sufficient training data.
-class FRDCConcatDataset(ConcatDataset):
-    def __init__(self, datasets: list[FRDCDataset]):
-        super().__init__(datasets)
-        self.datasets = datasets
-
-    def __getitem__(self, idx):
-        x, y = super().__getitem__(idx)
-        return x, y
-
-    @property
-    def targets(self):
-        return [t for ds in self.datasets for t in ds.targets]

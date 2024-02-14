@@ -41,28 +41,11 @@ def main(
     run = wandb.init()
     logger = WandbLogger(name="chestnut_dec_may", project="frdc")
     # Prepare the dataset
-    train_lab_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
+    train_lab_ds = ds.chestnut_20201218(
         transform=train_preprocess,
     )
-
-    # TODO: This is a hacky impl of the unlabelled dataset, see the docstring
-    #       for future work.
-    train_unl_ds = FRDCUnlabelledDataset(
-        "chestnut_nature_park",
-        "20201218",
-        None,
-        transform=train_unl_preprocess(2),
-    )
-
-    # Subset(train_ds, np.argwhere(train_ds.targets == 0).reshape(-1))
-    val_ds = FRDCDataset(
-        "chestnut_nature_park",
-        "20210510",
-        "90deg43m85pct255deg",
-        transform=preprocess,
+    train_unl_ds = ds.chestnut_20201218.unlabelled(
+        transform=train_unl_preprocess(n_aug=2)
     )
 
     oe = OrdinalEncoder(
@@ -84,6 +67,7 @@ def main(
         batch_size=batch_size,
         train_iters=train_iters,
         val_iters=val_iters,
+        sampling_strategy="random",
     )
 
     trainer = pl.Trainer(
@@ -135,7 +119,7 @@ def main(
 
 if __name__ == "__main__":
     BATCH_SIZE = 32
-    EPOCHS = 10
+    EPOCHS = 50
     TRAIN_ITERS = 25
     VAL_ITERS = 15
     LR = 1e-3
