@@ -5,11 +5,14 @@ from pathlib import Path
 
 import label_studio_sdk as label_studio
 import requests
+from dotenv import load_dotenv
 from google.cloud import storage as gcs
 
 logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parents[2]
+
+load_dotenv(ROOT_DIR / ".env")
 LOCAL_DATASET_ROOT_DIR = ROOT_DIR / "rsc"
 os.environ["GOOGLE_CLOUD_PROJECT"] = "frmodel"
 GCS_PROJECT_ID = "frmodel"
