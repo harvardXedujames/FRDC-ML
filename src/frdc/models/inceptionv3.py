@@ -110,14 +110,14 @@ class InceptionV3MixMatchModule(MixMatchModule):
         )
 
         # Copy the BGR weights from the first layer of the original model
-        conv2d_1a_3x3[0].weight.data[
+        conv2d_1a_3x3.conv.weight.data[
             :, :original_in_channels
         ] = inception.Conv2d_1a_3x3.conv.weight.data
 
         # We'll repeat the G weights to the other channels as an initial
         # approximation
         # We use [1:2] instead of [1] so it doesn't lose the dimension
-        conv2d_1a_3x3[0].weight.data[
+        conv2d_1a_3x3.conv.weight.data[
             :, original_in_channels:
         ] = inception.Conv2d_1a_3x3.conv.weight.data[:, 1:2].tile(
             (in_channels - original_in_channels, 1, 1)
