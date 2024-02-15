@@ -11,6 +11,9 @@ from torchvision.transforms.v2 import (
     RandomVerticalFlip,
     RandomCrop,
     CenterCrop,
+    RandomRotation,
+    RandomApply,
+    Resize,
 )
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
@@ -46,38 +49,43 @@ class FRDCDatasetFlipped(FRDCDataset):
 
 
 def preprocess(x):
-    return Compose(
-        [
-            ToImage(),
-            ToDtype(torch.float32, scale=True),
-            CenterCrop(
-                [
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                ],
-            ),
-        ]
-    )(x)
+    return torch.nan_to_num(
+        Compose(
+            [
+                ToImage(),
+                ToDtype(torch.float32, scale=True),
+                CenterCrop(
+                    [
+                        InceptionV3MixMatchModule.MIN_SIZE,
+                        InceptionV3MixMatchModule.MIN_SIZE,
+                    ],
+                ),
+            ]
+        )(x)
+    )
 
 
 def train_preprocess(x):
-    return Compose(
-        [
-            ToImage(),
-            ToDtype(torch.float32, scale=True),
-            RandomCrop(
-                [
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                ],
-                pad_if_needed=True,
-                padding_mode="constant",
-                fill=0,
-            ),
-            RandomHorizontalFlip(),
-            RandomVerticalFlip(),
-        ]
-    )(x)
+    return torch.nan_to_num(
+        Compose(
+            [
+                ToImage(),
+                ToDtype(torch.float32, scale=True),
+                RandomCrop(
+                    [
+                        InceptionV3MixMatchModule.MIN_SIZE,
+                        InceptionV3MixMatchModule.MIN_SIZE,
+                    ],
+                    pad_if_needed=True,
+                    padding_mode="constant",
+                    fill=0,
+                ),
+                RandomHorizontalFlip(),
+                RandomVerticalFlip(),
+                RandomApply([RandomRotation((90, 90))], p=0.5),
+            ]
+        )(x)
+    )
 
 
 def train_unl_preprocess(n_aug: int = 2):

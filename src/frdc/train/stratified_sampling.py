@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Iterator, Any, Sequence
 
-import pandas as pd
 import torch
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Sampler
