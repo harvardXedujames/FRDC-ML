@@ -32,6 +32,7 @@ def test_manual_segmentation_pipeline(ds):
     ss.fit(ds.ar.reshape(-1, ds.ar.shape[-1]))
 
     m = InceptionV3MixMatchModule(
+        in_channels=ds.ar.shape[-1],
         n_classes=n_classes,
         lr=1e-3,
         x_scaler=ss,
