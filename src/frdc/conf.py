@@ -56,7 +56,7 @@ try:
     )
     GCS_BUCKET = GCS_CLIENT.bucket(GCS_BUCKET_NAME)
     logger.info("Connected to GCS.")
-except Exception as e:
+except Exception:
     logger.warning(
         "Could not connect to GCS. Will not be able to download files. "
         "Check that you've (1) Installed the GCS CLI and (2) Set up the"
@@ -79,11 +79,11 @@ try:
         LABEL_STUDIO_CLIENT.get_project(1)
     except requests.exceptions.HTTPError:
         logger.warning(
-            f"Could not get main annotation project. "
-            f"Pulling annotations may not work. "
-            f"It's possible that your API Key is incorrect, "
-            f"or somehow your .netrc is preventing you from "
-            f"accessing the project. "
+            "Could not get main annotation project. "
+            "Pulling annotations may not work. "
+            "It's possible that your API Key is incorrect, "
+            "or somehow your .netrc is preventing you from "
+            "accessing the project. "
         )
 except requests.exceptions.ConnectionError:
     logger.warning(

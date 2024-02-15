@@ -6,8 +6,6 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
-import torch.nn.parallel
-import torch.nn.parallel
 import wandb
 from lightning import LightningModule
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder

@@ -4,6 +4,7 @@ import torch
 from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 from torch import nn
 from torchvision.models import Inception_V3_Weights, inception_v3
+from torchvision.models.inception import BasicConv2d, Inception3
 
 from frdc.train.mixmatch_module import MixMatchModule
 from frdc.utils.ema import EMA
@@ -81,29 +82,45 @@ class InceptionV3MixMatchModule(MixMatchModule):
         self.ema_lr = ema_lr
 
     @staticmethod
-    def adapt_inception_multi_channel(inception: nn.Module, in_channels: int):
-        """Adapt the 1st layer of the InceptionV3 model to accept n-channels."""
+    def adapt_inception_multi_channel(
+        inception: Inception3,
+        in_channels: int,
+    ) -> Inception3:
+        """Adapt the 1st layer of the InceptionV3 model to accept n-channels.
+
+        Notes:
+            This operation is in-place, however will still return the model
+
+        Args:
+            inception: The InceptionV3 model
+            in_channels: The number of input channels
+
+        Returns:
+            The adapted InceptionV3 model.
+        """
+
+        original_in_channels = inception.Conv2d_1a_3x3.conv.in_channels
 
         # Replicate the first layer, but with a different number of channels
-        # We can dynamically pull the architecture from inception if you want
-        # to make it more general.
-        conv2d_1a_3x3 = nn.Sequential(
-            nn.Conv2d(in_channels, 32, bias=False, kernel_size=3, stride=2),
-            nn.BatchNorm2d(32, eps=0.001),
+        conv2d_1a_3x3 = BasicConv2d(
+            in_channels=in_channels,
+            out_channels=inception.Conv2d_1a_3x3.conv.out_channels,
+            kernel_size=inception.Conv2d_1a_3x3.conv.kernel_size,
+            stride=inception.Conv2d_1a_3x3.conv.stride,
         )
 
         # Copy the BGR weights from the first layer of the original model
-        conv2d_1a_3x3[0].weight.data[
-            :, :3
+        conv2d_1a_3x3.conv.weight.data[
+            :, :original_in_channels
         ] = inception.Conv2d_1a_3x3.conv.weight.data
 
         # We'll repeat the G weights to the other channels as an initial
         # approximation
         # We use [1:2] instead of [1] so it doesn't lose the dimension
-        conv2d_1a_3x3[0].weight.data[
-            :, 3:
+        conv2d_1a_3x3.conv.weight.data[
+            :, original_in_channels:
         ] = inception.Conv2d_1a_3x3.conv.weight.data[:, 1:2].tile(
-            (in_channels - 3, 1, 1)
+            (in_channels - original_in_channels, 1, 1)
         )
 
         # Finally, set the new layer back

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, RandomSampler, Sampler
+from torch.utils.data import DataLoader, RandomSampler
 
 from frdc.load.dataset import FRDCDataset, FRDCUnlabelledDataset
 from frdc.train.stratified_sampling import RandomStratifiedSampler
