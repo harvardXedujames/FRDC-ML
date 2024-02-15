@@ -105,6 +105,8 @@ class InceptionV3MixMatchModule(MixMatchModule):
         conv2d_1a_3x3 = BasicConv2d(
             in_channels=in_channels,
             out_channels=inception.Conv2d_1a_3x3.conv.out_channels,
+            kernel_size=3,
+            stride=2,
         )
 
         # Copy the BGR weights from the first layer of the original model
