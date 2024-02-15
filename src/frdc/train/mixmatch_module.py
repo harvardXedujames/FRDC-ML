@@ -6,8 +6,6 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
-import torch.nn.parallel
-import torch.nn.parallel
 import wandb
 from lightning import LightningModule
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
@@ -213,6 +211,14 @@ class MixMatchModule(LightningModule):
             loss = self.loss_lbl(y_pred, y_lbl_ohe.float())
 
         self.log("train_loss", loss)
+
+        # Evaluate train accuracy
+        with torch.no_grad():
+            y_pred = self.ema_model(x_lbl)
+            acc = accuracy(
+                y_pred, y_lbl, task="multiclass", num_classes=y_pred.shape[1]
+            )
+            self.log("train_acc", acc, prog_bar=True)
         return loss
 
     # PyTorch Lightning doesn't automatically no_grads the EMA step.

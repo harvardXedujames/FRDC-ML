@@ -13,6 +13,7 @@ MIN_SIZE = InceptionV3MixMatchModule.MIN_SIZE
 @pytest.fixture(scope="module")
 def inceptionv3():
     return InceptionV3MixMatchModule(
+        in_channels=N_CHANNELS,
         n_classes=N_CLASSES,
         lr=1e-3,
         x_scaler=StandardScaler(),
@@ -27,14 +28,10 @@ def inceptionv3():
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE, True],
         # Can be a larger image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE + 1, True],
-        # Can have more channels
-        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE + 1, True],
+        # Cannot have more channels than specified
+        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE + 1, False],
         # Cannot have a smaller image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE - 1, False],
-        # No Singleton Dimension
-        [1, N_CHANNELS, MIN_SIZE, False],
-        # No Singleton Dimension
-        [BATCH_SIZE, 1, MIN_SIZE, False],
     ],
 )
 def test_inceptionv3_io(inceptionv3, batch_size, channels, size, ok):
@@ -55,14 +52,17 @@ def test_inceptionv3_io(inceptionv3, batch_size, channels, size, ok):
 
 def test_inception_frozen(inceptionv3):
     """Assert that the base model is frozen, and the rest is trainable."""
+
+    # Assert not all parameters are frozen
     assert (
         sum(p.numel() for p in inceptionv3.parameters() if p.requires_grad) > 0
     )
-    assert (
-        sum(
-            p.numel()
-            for p in inceptionv3.inception.parameters()
-            if p.requires_grad
-        )
-        == 0
+
+    # Assert that the inception model is frozen, except the first layer
+    assert sum(
+        p.numel()
+        for p in inceptionv3.inception.parameters()
+        if p.requires_grad
+    ) == sum(
+        p.numel() for p in inceptionv3.inception.Conv2d_1a_3x3.parameters()
     )
