@@ -28,8 +28,8 @@ def inceptionv3():
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE, True],
         # Can be a larger image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE + 1, True],
-        # Can have more channels
-        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE + 1, True],
+        # Cannot have more channels than specified
+        [BATCH_SIZE, N_CHANNELS + 1, MIN_SIZE + 1, False],
         # Cannot have a smaller image
         [BATCH_SIZE, N_CHANNELS, MIN_SIZE - 1, False],
     ],
