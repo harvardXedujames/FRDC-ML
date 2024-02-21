@@ -81,8 +81,8 @@ class InceptionV3MixMatchModule(MixMatchModule):
         # The problem is that the deep copy runs even before the module is
         # initialized, which means ema_model is empty.
         ema_model = deepcopy(self)
-        for param in ema_model.parameters():
-            param.detach_()
+        # for param in ema_model.parameters():
+        #     param.detach_()
 
         self._ema_model = ema_model
         self.ema_updater = EMA(model=self, ema_model=self.ema_model)
