@@ -25,11 +25,18 @@ class InceptionV3MixMatchModule(MixMatchModule):
         x_scaler: StandardScaler,
         y_encoder: OrdinalEncoder,
         ema_lr: float = 0.001,
+        imagenet_scaling: bool = False,
     ):
         """Initialize the InceptionV3 model.
 
         Args:
-            n_classes: The number of output classes
+            in_channels: The number of input channels.
+            n_classes: The number of classes.
+            lr: The learning rate.
+            x_scaler: The X input StandardScaler.
+            y_encoder: The Y input OrdinalEncoder.
+            ema_lr: The learning rate for the EMA model.
+            imagenet_scaling: Whether to use the adapted ImageNet scaling.
 
         Notes:
             - Min input size: 299 x 299.
@@ -129,7 +136,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
         return inception
 
     @staticmethod
-    def transform_input(x: torch.Tensor) -> torch.Tensor:
+    def imagenet_scaling(x: torch.Tensor) -> torch.Tensor:
         """Perform adapted ImageNet normalization on the input tensor.
 
         See Also:
@@ -181,7 +188,9 @@ class InceptionV3MixMatchModule(MixMatchModule):
                 f"Got: {x.shape[2]} x {x.shape[3]}."
             )
 
-        x = self.transform_input(x)
+        if self.imagenet_scaling:
+            x = self.imagenet_scaling(x)
+
         # During training, the auxiliary outputs are used for auxiliary loss,
         # but during testing, only the main output is used.
         if self.training:
