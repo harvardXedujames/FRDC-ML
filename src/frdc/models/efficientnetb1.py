@@ -70,9 +70,7 @@ class EfficientNetB1MixMatchModule(MixMatchModule):
         self.eff = self.adapt_efficient_multi_channel(self.eff, in_channels)
 
         self.fc = nn.Sequential(
-            nn.Linear(self.EFF_OUT_DIMS, self.EFF_OUT_DIMS // 2),
-            nn.BatchNorm1d(self.EFF_OUT_DIMS // 2),
-            nn.Linear(self.EFF_OUT_DIMS // 2, n_classes),
+            nn.Linear(self.EFF_OUT_DIMS, n_classes),
             nn.Softmax(dim=1),
         )
 
