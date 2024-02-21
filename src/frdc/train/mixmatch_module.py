@@ -153,8 +153,6 @@ class MixMatchModule(LightningModule):
 
         self.log("train/x_lbl_mean", x_lbl.mean())
         self.log("train/x_lbl_stdev", x_lbl.std())
-        self.log("train/x0_unl_mean", x_unls[0].mean())
-        self.log("train/x0_unl_stdev", x_unls[0].std())
 
         wandb.log({"train/x_lbl": self.wandb_hist(y_lbl, self.n_classes)})
         y_lbl_ohe = one_hot(y_lbl.long(), num_classes=self.n_classes)
@@ -163,6 +161,8 @@ class MixMatchModule(LightningModule):
         # Otherwise, we are just using supervised learning.
         if x_unls:
             # This route implies that we are using SSL
+            self.log("train/x0_unl_mean", x_unls[0].mean())
+            self.log("train/x0_unl_stdev", x_unls[0].std())
             with torch.no_grad():
                 y_unl = self.guess_labels(x_unls=x_unls)
                 y_unl = self.sharpen(y_unl, self.sharpen_temp)
