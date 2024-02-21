@@ -56,7 +56,6 @@ def main(
     batch_size=32,
     epochs=10,
     train_iters=25,
-    val_iters=15,
     lr=1e-3,
     wandb_name="chestnut_dec_may",
     wandb_project="frdc",
@@ -145,7 +144,6 @@ if __name__ == "__main__":
     BATCH_SIZE = 32
     EPOCHS = 50
     TRAIN_ITERS = 25
-    VAL_ITERS = 15
     LR = 1e-3
 
     torch.set_float32_matmul_precision("high")
@@ -153,7 +151,6 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         train_iters=TRAIN_ITERS,
-        val_iters=VAL_ITERS,
         lr=LR,
         wandb_name="Try with Inception Unfrozen & Random Erasing",
         wandb_project="frdc-dev",
