@@ -53,6 +53,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
             sharpen_temp=0.5,
             mix_beta_alpha=0.75,
         )
+        self.imagenet_scaling = imagenet_scaling
 
         self.inception = inception_v3(
             weights=Inception_V3_Weights.IMAGENET1K_V1,
@@ -136,7 +137,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
         return inception
 
     @staticmethod
-    def imagenet_scaling(x: torch.Tensor) -> torch.Tensor:
+    def _imagenet_scaling(x: torch.Tensor) -> torch.Tensor:
         """Perform adapted ImageNet normalization on the input tensor.
 
         See Also:
@@ -189,7 +190,7 @@ class InceptionV3MixMatchModule(MixMatchModule):
             )
 
         if self.imagenet_scaling:
-            x = self.imagenet_scaling(x)
+            x = self._imagenet_scaling(x)
 
         # During training, the auxiliary outputs are used for auxiliary loss,
         # but during testing, only the main output is used.
