@@ -51,7 +51,6 @@ class MixMatchModule(LightningModule):
         self.sharpen_temp = sharpen_temp
         self.mix_beta_alpha = mix_beta_alpha
         self.save_hyperparameters()
-        self.lbl_logger = WandBLabelLogger()
 
     @property
     @abstractmethod
@@ -151,20 +150,19 @@ class MixMatchModule(LightningModule):
 
     def training_step(self, batch, batch_idx):
         (x_lbl, y_lbl), x_unls = batch
-        self.lbl_logger(
-            self.logger.experiment,
-            "Input Y Label",
-            y_lbl,
-            flush_every=10,
-            num_bins=self.n_classes,
-        )
 
+        self.log("train/x_lbl_mean", x_lbl.mean())
+        self.log("train/x_lbl_stdev", x_lbl.std())
+
+        wandb.log({"train/x_lbl": self.wandb_hist(y_lbl, self.n_classes)})
         y_lbl_ohe = one_hot(y_lbl.long(), num_classes=self.n_classes)
 
         # If x_unls is Truthy, then we are using MixMatch.
         # Otherwise, we are just using supervised learning.
         if x_unls:
             # This route implies that we are using SSL
+            self.log("train/x0_unl_mean", x_unls[0].mean())
+            self.log("train/x0_unl_stdev", x_unls[0].std())
             with torch.no_grad():
                 y_unl = self.guess_labels(x_unls=x_unls)
                 y_unl = self.sharpen(y_unl, self.sharpen_temp)
@@ -183,34 +181,34 @@ class MixMatchModule(LightningModule):
             y_mix_unl = y_mix[batch_size:]
 
             loss_lbl = self.loss_lbl(y_mix_lbl_pred, y_mix_lbl)
-            self.lbl_logger(
-                self.logger.experiment,
-                "Labelled Y Pred",
-                torch.argmax(y_mix_lbl_pred, dim=1),
-                flush_every=10,
-                num_bins=self.n_classes,
-            )
             loss_unl = self.loss_unl(y_mix_unl_pred, y_mix_unl)
-            self.lbl_logger(
-                self.logger.experiment,
-                "Unlabelled Y Pred",
-                torch.argmax(y_mix_unl_pred, dim=1),
-                flush_every=10,
-                num_bins=self.n_classes,
+            wandb.log(
+                {
+                    "train/y_lbl_pred": self.wandb_hist(
+                        torch.argmax(y_mix_lbl_pred, dim=1), self.n_classes
+                    )
+                }
+            )
+            wandb.log(
+                {
+                    "train/y_unl_pred": self.wandb_hist(
+                        torch.argmax(y_mix_unl_pred, dim=1), self.n_classes
+                    )
+                }
             )
             loss_unl_scale = self.loss_unl_scaler(progress=self.progress)
 
             loss = loss_lbl + loss_unl * loss_unl_scale
 
-            self.log("loss_unl_scale", loss_unl_scale, prog_bar=True)
-            self.log("train_loss_lbl", loss_lbl)
-            self.log("train_loss_unl", loss_unl)
+            self.log("train/loss_unl_scale", loss_unl_scale, prog_bar=True)
+            self.log("train/ce_loss_lbl", loss_lbl)
+            self.log("train/mse_loss_unl", loss_unl)
         else:
             # This route implies that we are just using supervised learning
             y_pred = self(x_lbl)
             loss = self.loss_lbl(y_pred, y_lbl_ohe.float())
 
-        self.log("train_loss", loss)
+        self.log("train/loss", loss)
 
         # Evaluate train accuracy
         with torch.no_grad():
@@ -218,7 +216,7 @@ class MixMatchModule(LightningModule):
             acc = accuracy(
                 y_pred, y_lbl, task="multiclass", num_classes=y_pred.shape[1]
             )
-            self.log("train_acc", acc, prog_bar=True)
+            self.log("train/acc", acc, prog_bar=True)
         return loss
 
     # PyTorch Lightning doesn't automatically no_grads the EMA step.
@@ -227,30 +225,31 @@ class MixMatchModule(LightningModule):
     def on_after_backward(self) -> None:
         self.update_ema()
 
+    @staticmethod
+    def wandb_hist(x: torch.Tensor, num_bins: int) -> wandb.Histogram:
+        return wandb.Histogram(
+            torch.flatten(x).detach().cpu().tolist(),
+            num_bins=num_bins,
+        )
+
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        self.lbl_logger(
-            self.logger.experiment,
-            "Val Input Y Label",
-            y,
-            flush_every=1,
-            num_bins=self.n_classes,
-        )
+        wandb.log({"val/y_lbl": self.wandb_hist(y, self.n_classes)})
         y_pred = self.ema_model(x)
-        self.lbl_logger(
-            self.logger.experiment,
-            "Val Pred Y Label",
-            torch.argmax(y_pred, dim=1),
-            flush_every=1,
-            num_bins=self.n_classes,
+        wandb.log(
+            {
+                "val/y_lbl_pred": self.wandb_hist(
+                    torch.argmax(y_pred, dim=1), self.n_classes
+                )
+            }
         )
         loss = F.cross_entropy(y_pred, y.long())
 
         acc = accuracy(
             y_pred, y, task="multiclass", num_classes=y_pred.shape[1]
         )
-        self.log("val_loss", loss)
-        self.log("val_acc", acc, prog_bar=True)
+        self.log("val/ce_loss", loss)
+        self.log("val/acc", acc, prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -261,8 +260,8 @@ class MixMatchModule(LightningModule):
         acc = accuracy(
             y_pred, y, task="multiclass", num_classes=y_pred.shape[1]
         )
-        self.log("test_loss", loss)
-        self.log("test_acc", acc, prog_bar=True)
+        self.log("test/ce_loss", loss)
+        self.log("test/acc", acc, prog_bar=True)
         return loss
 
     def predict_step(self, batch, *args, **kwargs) -> Any:
@@ -305,7 +304,7 @@ class MixMatchModule(LightningModule):
 
             # Move Channel back to the second dimension
             # B x H x W x C -> B x C x H x W
-            return (
+            return torch.nan_to_num(
                 torch.from_numpy(x_ss.reshape(b, h, w, c))
                 .permute(0, 3, 1, 2)
                 .float()
@@ -335,46 +334,11 @@ class MixMatchModule(LightningModule):
         nan = ~torch.isnan(y_trans)
         x_lab_trans = x_lab_trans[nan]
         x_unl_trans = [x[nan] for x in x_unl_trans]
+        x_lab_trans = torch.nan_to_num(x_lab_trans)
+        x_unl_trans = [torch.nan_to_num(x) for x in x_unl_trans]
         y_trans = y_trans[nan]
 
         if self.training:
             return (x_lab_trans, y_trans.long()), x_unl_trans
         else:
             return x_lab_trans, y_trans.long()
-
-
-class WandBLabelLogger(dict):
-    """Logger to log y labels to WandB"""
-
-    def __call__(
-        self,
-        logger: wandb.sdk.wandb_run.Run,
-        key: str,
-        value: torch.Tensor,
-        num_bins: int,
-        flush_every: int = 10,
-    ):
-        """Log the labels to WandB
-
-        Args:
-            logger: The W&B logger. Accessible through `self.logger.experiment`
-            key: The key to log the labels under.
-            value: The labels to log.
-            flush_every: How often to flush the labels to WandB.
-
-        """
-        if key not in self.keys():
-            self[key] = [value]
-        else:
-            self[key].append(value)
-
-        if len(self[key]) % flush_every == 0:
-            logger.log(
-                {
-                    key: wandb.Histogram(
-                        torch.flatten(value).detach().cpu().tolist(),
-                        num_bins=num_bins,
-                    )
-                }
-            )
-            self[key] = []

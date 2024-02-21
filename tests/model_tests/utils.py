@@ -14,6 +14,7 @@ from torchvision.transforms.v2 import (
     RandomRotation,
     RandomApply,
     Resize,
+    RandomErasing,
 )
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
@@ -48,51 +49,49 @@ class FRDCDatasetFlipped(FRDCDataset):
             return RandomHorizontalFlip(p=1)(RandomVerticalFlip(p=1)(x)), y
 
 
-def preprocess(x):
-    return torch.nan_to_num(
-        Compose(
-            [
-                ToImage(),
-                ToDtype(torch.float32, scale=True),
-                CenterCrop(
-                    [
-                        InceptionV3MixMatchModule.MIN_SIZE,
-                        InceptionV3MixMatchModule.MIN_SIZE,
-                    ],
-                ),
-            ]
-        )(x)
-    )
+def val_preprocess(x):
+    return Compose(
+        [
+            ToImage(),
+            ToDtype(torch.float32, scale=True),
+            Resize(
+                InceptionV3MixMatchModule.MIN_SIZE,
+                antialias=True,
+            ),
+            CenterCrop(
+                InceptionV3MixMatchModule.MIN_SIZE,
+            ),
+        ]
+    )(x)
 
 
-def train_preprocess(x):
-    return torch.nan_to_num(
-        Compose(
-            [
-                ToImage(),
-                ToDtype(torch.float32, scale=True),
-                RandomCrop(
-                    [
-                        InceptionV3MixMatchModule.MIN_SIZE,
-                        InceptionV3MixMatchModule.MIN_SIZE,
-                    ],
-                    pad_if_needed=True,
-                    padding_mode="constant",
-                    fill=0,
-                ),
-                RandomHorizontalFlip(),
-                RandomVerticalFlip(),
-                RandomApply([RandomRotation((90, 90))], p=0.5),
-            ]
-        )(x)
-    )
+def train_preprocess_augment(x):
+    return Compose(
+        [
+            ToImage(),
+            ToDtype(torch.float32, scale=True),
+            Resize(
+                InceptionV3MixMatchModule.MIN_SIZE,
+                antialias=True,
+            ),
+            RandomCrop(
+                InceptionV3MixMatchModule.MIN_SIZE,
+                pad_if_needed=False,
+            ),
+            RandomHorizontalFlip(),
+            RandomVerticalFlip(),
+            RandomApply([RandomRotation((90, 90))], p=0.5),
+        ]
+    )(x)
 
 
 def train_unl_preprocess(n_aug: int = 2):
     def f(x):
         # This simulates the n_aug of MixMatch
         return (
-            [train_preprocess(x) for _ in range(n_aug)] if n_aug > 0 else None
+            [train_preprocess_augment(x) for _ in range(n_aug)]
+            if n_aug > 0
+            else None
         )
 
     return f

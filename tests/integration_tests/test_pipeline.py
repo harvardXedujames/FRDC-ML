@@ -42,5 +42,5 @@ def test_manual_segmentation_pipeline(ds):
     trainer = pl.Trainer(fast_dev_run=True)
     trainer.fit(m, datamodule=dm)
 
-    val_loss = trainer.validate(m, datamodule=dm)[0]["val_loss"]
+    val_loss = trainer.validate(m, datamodule=dm)[0]["val/ce_loss"]
     logging.debug(f"Validation score: {val_loss:.2%}")

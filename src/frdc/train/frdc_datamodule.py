@@ -53,7 +53,6 @@ class FRDCDataModule(LightningDataModule):
         batch_size: The batch size to use for the dataloaders.
         train_iters: The number of iterations to run for the labelled training
             dataset.
-        val_iters: The number of iterations to run for the validation dataset.
 
     """
 
@@ -62,7 +61,6 @@ class FRDCDataModule(LightningDataModule):
     train_unl_ds: FRDCDataset | FRDCUnlabelledDataset | None = None
     batch_size: int = 4
     train_iters: int = 100
-    val_iters: int = 100
     sampling_strategy: Literal["stratified", "random"] = "stratified"
 
     def __post_init__(self):
