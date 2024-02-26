@@ -11,11 +11,13 @@ from torchvision.transforms.v2 import (
     RandomVerticalFlip,
     RandomCrop,
     CenterCrop,
+    RandomRotation,
+    RandomApply,
+    Resize,
 )
 from torchvision.transforms.v2 import RandomHorizontalFlip
 
 from frdc.load.dataset import FRDCDataset
-from frdc.models.inceptionv3 import InceptionV3MixMatchModule
 
 THIS_DIR = Path(__file__).parent
 
@@ -45,46 +47,34 @@ class FRDCDatasetFlipped(FRDCDataset):
             return RandomHorizontalFlip(p=1)(RandomVerticalFlip(p=1)(x)), y
 
 
-def preprocess(x):
-    return Compose(
+def val_preprocess(size: int):
+    return lambda x: Compose(
         [
             ToImage(),
             ToDtype(torch.float32, scale=True),
-            CenterCrop(
-                [
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                ],
-            ),
+            Resize(size, antialias=True),
+            CenterCrop(size),
         ]
     )(x)
 
 
-def train_preprocess(x):
-    return Compose(
+def train_preprocess_augment(size: int):
+    return lambda x: Compose(
         [
             ToImage(),
             ToDtype(torch.float32, scale=True),
-            RandomCrop(
-                [
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                    InceptionV3MixMatchModule.MIN_SIZE,
-                ],
-                pad_if_needed=True,
-                padding_mode="constant",
-                fill=0,
-            ),
+            Resize(size, antialias=True),
+            RandomCrop(size, pad_if_needed=False),
             RandomHorizontalFlip(),
             RandomVerticalFlip(),
+            RandomApply([RandomRotation((90, 90))], p=0.5),
         ]
     )(x)
 
 
-def train_unl_preprocess(n_aug: int = 2):
-    def f(x):
-        # This simulates the n_aug of MixMatch
-        return (
-            [train_preprocess(x) for _ in range(n_aug)] if n_aug > 0 else None
-        )
-
-    return f
+def train_unl_preprocess(size, n_aug: int = 2):
+    return lambda x: (
+        [train_preprocess_augment(size)(x) for _ in range(n_aug)]
+        if n_aug > 0
+        else None
+    )

@@ -1,8 +1,11 @@
 import numpy as np
 import pytest
+import wandb
 
 from frdc.load.dataset import FRDCDataset
 from frdc.load.preset import FRDCDatasetPreset
+
+wandb.init(mode="disabled")
 
 
 @pytest.fixture(scope="session")

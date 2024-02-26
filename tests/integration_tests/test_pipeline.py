@@ -32,6 +32,7 @@ def test_manual_segmentation_pipeline(ds):
     ss.fit(ds.ar.reshape(-1, ds.ar.shape[-1]))
 
     m = InceptionV3MixMatchModule(
+        in_channels=ds.ar.shape[-1],
         n_classes=n_classes,
         lr=1e-3,
         x_scaler=ss,
@@ -41,5 +42,5 @@ def test_manual_segmentation_pipeline(ds):
     trainer = pl.Trainer(fast_dev_run=True)
     trainer.fit(m, datamodule=dm)
 
-    val_loss = trainer.validate(m, datamodule=dm)[0]["val_loss"]
+    val_loss = trainer.validate(m, datamodule=dm)[0]["val/ce_loss"]
     logging.debug(f"Validation score: {val_loss:.2%}")

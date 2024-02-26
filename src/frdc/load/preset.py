@@ -152,10 +152,10 @@ class FRDCDatasetPreset:
         "chestnut_nature_park", "20210510", "90deg60m84.5pct255deg"
     )
     casuarina_20220418_183deg = FRDCDatasetPartial(
-        "casuarina_nature_park", "20220418", "183deg"
+        "casuarina", "20220418", "183deg"
     )
     casuarina_20220418_93deg = FRDCDatasetPartial(
-        "casuarina_nature_park", "20220418", "93deg"
+        "casuarina", "20220418", "93deg"
     )
     DEBUG = lambda resize=299: FRDCDatasetPartial(
         site="DEBUG", date="0", version=None

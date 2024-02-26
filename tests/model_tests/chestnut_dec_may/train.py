@@ -3,17 +3,11 @@
 This test is done by training a model on the 20201218 dataset, then testing on
 the 20210510 dataset.
 """
-import os
-
-# Uncomment this to run the W&B monitoring locally
-# import os
-# from frdc.utils.training import predict, plot_confusion_matrix
-# os.environ["WANDB_MODE"] = "offline"
-
 from pathlib import Path
 
 import lightning as pl
 import numpy as np
+import torch
 import wandb
 from lightning.pytorch.callbacks import (
     LearningRateMonitor,
@@ -24,40 +18,57 @@ from lightning.pytorch.loggers import WandbLogger
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
 from frdc.load.preset import FRDCDatasetPreset as ds
-from frdc.models.inceptionv3 import InceptionV3MixMatchModule
+from frdc.models.efficientnetb1 import EfficientNetB1MixMatchModule
 from frdc.train.frdc_datamodule import FRDCDataModule
 from frdc.utils.training import predict, plot_confusion_matrix
 from model_tests.utils import (
-    train_preprocess,
+    train_preprocess_augment,
     train_unl_preprocess,
-    preprocess,
+    val_preprocess,
     FRDCDatasetFlipped,
 )
+
+
+# Uncomment this to run the W&B monitoring locally
+# import os
+#
+# os.environ["WANDB_MODE"] = "offline"
+
+
+def get_y_encoder(targets):
+    oe = OrdinalEncoder(
+        handle_unknown="use_encoded_value",
+        unknown_value=np.nan,
+    )
+    oe.fit(np.array(targets).reshape(-1, 1))
+    return oe
+
+
+def get_x_scaler(segments):
+    ss = StandardScaler()
+    ss.fit(
+        np.concatenate([segm.reshape(-1, segm.shape[-1]) for segm in segments])
+    )
+    return ss
 
 
 def main(
     batch_size=32,
     epochs=10,
     train_iters=25,
-    val_iters=15,
     lr=1e-3,
+    wandb_name="chestnut_dec_may",
+    wandb_project="frdc",
 ):
     # Prepare the dataset
-    train_lab_ds = ds.chestnut_20201218(transform=train_preprocess)
+    im_size = 299
+    train_lab_ds = ds.chestnut_20201218(
+        transform=train_preprocess_augment(im_size)
+    )
     train_unl_ds = ds.chestnut_20201218.unlabelled(
-        transform=train_unl_preprocess(2)
+        transform=train_unl_preprocess(im_size, 2)
     )
-    val_ds = ds.chestnut_20210510_43m(transform=preprocess)
-
-    oe = OrdinalEncoder(
-        handle_unknown="use_encoded_value",
-        unknown_value=np.nan,
-    )
-    oe.fit(np.array(train_lab_ds.targets).reshape(-1, 1))
-    n_classes = len(oe.categories_[0])
-
-    ss = StandardScaler()
-    ss.fit(train_lab_ds.ar.reshape(-1, train_lab_ds.ar.shape[-1]))
+    val_ds = ds.chestnut_20210510_43m(transform=val_preprocess(im_size))
 
     # Prepare the datamodule and trainer
     dm = FRDCDataModule(
@@ -66,7 +77,6 @@ def main(
         val_ds=val_ds,
         batch_size=batch_size,
         train_iters=train_iters,
-        val_iters=val_iters,
         sampling_strategy="random",
     )
 
@@ -77,26 +87,33 @@ def main(
         log_every_n_steps=4,
         callbacks=[
             # Stop training if the validation loss doesn't improve for 4 epochs
-            EarlyStopping(monitor="val_loss", patience=4, mode="min"),
+            EarlyStopping(monitor="val/ce_loss", patience=4, mode="min"),
             # Log the learning rate on TensorBoard
             LearningRateMonitor(logging_interval="epoch"),
             # Save the best model
             ckpt := ModelCheckpoint(
-                monitor="val_loss", mode="min", save_top_k=1
+                monitor="val/ce_loss", mode="min", save_top_k=1
             ),
         ],
         logger=(
-            logger := WandbLogger(name="chestnut_dec_may", project="frdc")
+            logger := WandbLogger(
+                name=wandb_name,
+                project=wandb_project,
+            )
         ),
     )
 
-    m = InceptionV3MixMatchModule(
-        n_classes=n_classes,
+    oe = get_y_encoder(train_lab_ds.targets)
+    ss = get_x_scaler(train_lab_ds.ar_segments)
+
+    m = EfficientNetB1MixMatchModule(
+        in_channels=train_lab_ds.ar.shape[-1],
+        n_classes=len(oe.categories_[0]),
         lr=lr,
         x_scaler=ss,
         y_encoder=oe,
+        frozen=True,
     )
-    logger.watch(m)
 
     trainer.fit(m, datamodule=dm)
 
@@ -111,17 +128,16 @@ def main(
             "chestnut_nature_park",
             "20210510",
             "90deg43m85pct255deg",
-            transform=preprocess,
+            transform=val_preprocess(im_size),
         ),
-        model_cls=InceptionV3MixMatchModule,
-        ckpt_pth=Path(ckpt.best_model_path),
+        model=m,
     )
     fig, ax = plot_confusion_matrix(y_true, y_pred, oe.categories_[0])
     acc = np.sum(y_true == y_pred) / len(y_true)
     ax.set_title(f"Accuracy: {acc:.2%}")
 
-    wandb.log({"confusion_matrix": wandb.Image(fig)})
-    wandb.log({"eval_accuracy": acc})
+    wandb.log({"eval/confusion_matrix": wandb.Image(fig)})
+    wandb.log({"eval/eval_accuracy": acc})
 
     wandb.finish()
 
@@ -130,15 +146,14 @@ if __name__ == "__main__":
     BATCH_SIZE = 32
     EPOCHS = 50
     TRAIN_ITERS = 25
-    VAL_ITERS = 15
     LR = 1e-3
 
-    wandb.login(key=os.environ["WANDB_API_KEY"])
-
+    torch.set_float32_matmul_precision("high")
     main(
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         train_iters=TRAIN_ITERS,
-        val_iters=VAL_ITERS,
         lr=LR,
+        wandb_name="EfficientNet 299x299",
+        wandb_project="frdc-dev",
     )
